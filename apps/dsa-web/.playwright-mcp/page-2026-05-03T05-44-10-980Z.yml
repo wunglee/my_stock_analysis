@@ -1,0 +1,105 @@
+- generic [ref=e4]:
+  - complementary "桌面侧边导航" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img [ref=e9]
+        - paragraph [ref=e11]: DSA
+      - navigation "主导航" [ref=e12]:
+        - link "首页" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e15]
+          - generic [ref=e18]: 首页
+        - link "问股" [ref=e19] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e20]
+          - generic [ref=e24]: 问股
+        - link "持仓" [ref=e25] [cursor=pointer]:
+          - /url: /portfolio
+          - img [ref=e26]
+          - generic [ref=e30]: 持仓
+        - link "回测" [ref=e31] [cursor=pointer]:
+          - /url: /backtest
+          - img [ref=e32]
+          - generic [ref=e34]: 回测
+        - link "设置" [ref=e35] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e36]
+          - generic [ref=e39]: 设置
+      - button "切换主题" [ref=e42]:
+        - img [ref=e43]
+        - generic [ref=e45]: 主题
+  - main [ref=e46]:
+    - generic [ref=e242]:
+      - generic [ref=e243]:
+        - generic [ref=e244]:
+          - button "AI 回测" [ref=e245]
+          - button "纯技术回测" [ref=e246]
+        - generic [ref=e247]:
+          - textbox "输入股票代码，逗号分隔（如：600519,000858）" [ref=e345]: "600519"
+          - generic [ref=e346]:
+            - generic [ref=e347]: 从
+            - textbox "开始日期" [ref=e348]: 2024-01-01
+          - generic [ref=e252]:
+            - generic [ref=e253]: 到
+            - textbox "结束日期" [ref=e349]: 2024-06-01
+          - generic [ref=e255]:
+            - generic [ref=e256]: 窗口
+            - spinbutton [ref=e350]: "10"
+          - button "运行纯技术回测" [active] [ref=e351] [cursor=pointer]
+      - main [ref=e267]:
+        - generic [ref=e362]:
+          - generic [ref=e364]: 纯技术回测概览
+          - generic [ref=e365]:
+            - generic [ref=e366]:
+              - generic [ref=e367]: 股票数
+              - generic [ref=e368]: "2"
+            - generic [ref=e369]:
+              - generic [ref=e370]: 日期范围
+              - generic [ref=e371]: 2024-01-01 ~ 2024-06-01
+            - generic [ref=e372]:
+              - generic [ref=e373]: 评估窗口
+              - generic [ref=e374]: 10 天
+          - generic [ref=e375]:
+            - generic [ref=e376]: 跨股票相关性
+            - generic [ref=e377]:
+              - generic [ref=e378]: 600519 ↔ 000858
+              - generic [ref=e379]: "0.72"
+        - generic [ref=e380]:
+          - generic [ref=e382]:
+            - generic [ref=e383]: 纯技术回测结果
+            - generic [ref=e384]: 600519, 000858 · 2024-01-01 ~ 2024-06-01
+          - generic [ref=e385]:
+            - generic [ref=e387] [cursor=pointer]:
+              - generic [ref=e388]:
+                - generic [ref=e389]: "600519"
+                - generic [ref=e390]: 贵州茅台
+                - generic [ref=e391]: 2024-01-01 ~ 2024-06-01
+              - generic [ref=e392]:
+                - generic [ref=e393]: 信号 45
+                - generic [ref=e394]:
+                  - text: 胜率
+                  - generic [ref=e395]: 58%
+                - generic [ref=e396]:
+                  - text: 均收
+                  - generic [ref=e397]: +2.3%
+                - generic [ref=e398]:
+                  - text: 回撤
+                  - generic [ref=e399]: "-5.2%"
+                - img [ref=e400]
+            - generic [ref=e403] [cursor=pointer]:
+              - generic [ref=e404]:
+                - generic [ref=e405]: "000858"
+                - generic [ref=e406]: 五粮液
+                - generic [ref=e407]: 2024-01-01 ~ 2024-06-01
+              - generic [ref=e408]:
+                - generic [ref=e409]: 信号 38
+                - generic [ref=e410]:
+                  - text: 胜率
+                  - generic [ref=e411]: 55%
+                - generic [ref=e412]:
+                  - text: 均收
+                  - generic [ref=e413]: +1.9%
+                - generic [ref=e414]:
+                  - text: 回撤
+                  - generic [ref=e415]: "-4.8%"
+                - img [ref=e416]

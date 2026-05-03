@@ -1,0 +1,108 @@
+- generic [ref=e6]:
+  - complementary "桌面侧边导航" [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - img [ref=e11]
+        - paragraph [ref=e13]: DSA
+      - navigation "主导航" [ref=e14]:
+        - link "首页" [ref=e15] [cursor=pointer]:
+          - /url: /
+          - img [ref=e17]
+          - generic [ref=e20]: 首页
+        - link "问股" [active] [ref=e21] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e22]
+          - generic [ref=e26]: 问股
+        - link "持仓" [ref=e27] [cursor=pointer]:
+          - /url: /portfolio
+          - img [ref=e28]
+          - generic [ref=e32]: 持仓
+        - link "回测" [ref=e33] [cursor=pointer]:
+          - /url: /backtest
+          - img [ref=e34]
+          - generic [ref=e36]: 回测
+        - link "设置" [ref=e37] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e38]
+          - generic [ref=e41]: 设置
+      - button "切换主题" [ref=e44]:
+        - img [ref=e45]
+        - generic [ref=e47]: 主题
+  - main [ref=e48]:
+    - generic [ref=e233]:
+      - generic [ref=e234]:
+        - generic [ref=e235]:
+          - heading "历史对话" [level=2] [ref=e236]:
+            - img [ref=e237]
+            - text: 历史对话
+          - button "开启新对话" [ref=e239]:
+            - img [ref=e240]
+        - generic [ref=e245]:
+          - button "切换到对话 用情绪周期分析东方财富" [ref=e246] [cursor=pointer]:
+            - generic [ref=e248]:
+              - generic [ref=e249]: 用情绪周期分析东方财富
+              - generic [ref=e250]:
+                - generic [ref=e251]: 6 条对话
+                - generic [ref=e253]: 5月2日
+          - button "删除对话 用情绪周期分析东方财富" [ref=e254]:
+            - img [ref=e255]
+      - generic [ref=e257]:
+        - generic [ref=e258]:
+          - heading "问股" [level=1] [ref=e260]:
+            - img [ref=e261]
+            - text: 问股
+          - paragraph [ref=e263]: 向 AI 询问个股分析，获取基于技能视角的交易建议与实时决策报告。
+        - generic [ref=e264]:
+          - generic [ref=e268]:
+            - img [ref=e270]
+            - heading "开始问股" [level=3] [ref=e272]
+            - paragraph [ref=e273]: 输入「分析 600519」或「茅台现在能买吗」，AI 将调用实时数据工具为您生成决策报告。
+            - generic [ref=e275]:
+              - button "用缠论分析茅台" [ref=e276]
+              - button "波浪理论看宁德时代" [ref=e277]
+              - button "分析比亚迪趋势" [ref=e278]
+              - button "箱体震荡技能看中芯国际" [ref=e279]
+              - button "分析腾讯 hk00700" [ref=e280]
+              - button "用情绪周期分析东方财富" [ref=e281]
+          - generic [ref=e283]:
+            - generic [ref=e284]:
+              - generic [ref=e285]: 策略
+              - generic [ref=e286] [cursor=pointer]:
+                - checkbox "通用分析" [ref=e287]
+                - generic [ref=e288]: 通用分析
+              - generic [ref=e289] [cursor=pointer]:
+                - checkbox "默认多头趋势" [checked] [ref=e290]
+                - generic [ref=e291]: 默认多头趋势
+              - generic [ref=e292] [cursor=pointer]:
+                - checkbox "均线金叉" [ref=e293]
+                - generic [ref=e294]: 均线金叉
+              - generic [ref=e295] [cursor=pointer]:
+                - checkbox "放量突破" [ref=e296]
+                - generic [ref=e297]: 放量突破
+              - generic [ref=e298] [cursor=pointer]:
+                - checkbox "缩量回踩" [ref=e299]
+                - generic [ref=e300]: 缩量回踩
+              - generic [ref=e301] [cursor=pointer]:
+                - checkbox "箱体震荡" [ref=e302]
+                - generic [ref=e303]: 箱体震荡
+              - generic [ref=e304] [cursor=pointer]:
+                - checkbox "底部放量" [ref=e305]
+                - generic [ref=e306]: 底部放量
+              - generic [ref=e307] [cursor=pointer]:
+                - checkbox "缠论" [ref=e308]
+                - generic [ref=e309]: 缠论
+              - generic [ref=e310] [cursor=pointer]:
+                - checkbox "波浪理论" [ref=e311]
+                - generic [ref=e312]: 波浪理论
+              - generic [ref=e313] [cursor=pointer]:
+                - checkbox "龙头策略" [ref=e314]
+                - generic [ref=e315]: 龙头策略
+              - generic [ref=e316] [cursor=pointer]:
+                - checkbox "情绪周期" [ref=e317]
+                - generic [ref=e318]: 情绪周期
+              - generic [ref=e319] [cursor=pointer]:
+                - checkbox "一阳夹三阴" [ref=e320]
+                - generic [ref=e321]: 一阳夹三阴
+            - generic [ref=e322]:
+              - textbox "例如：分析 600519 / 茅台现在适合买入吗？ (Enter 发送, Shift+Enter 换行)" [ref=e323]
+              - button "发送" [disabled]

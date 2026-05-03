@@ -1,0 +1,90 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "📊 DeepSeekQuant" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e8]: 📊
+        - text: DeepSeekQuant
+      - navigation [ref=e9]:
+        - link "Explorer" [ref=e10] [cursor=pointer]:
+          - /url: /explorer
+        - link "Providers" [ref=e11] [cursor=pointer]:
+          - /url: /providers
+      - generic [ref=e14]: 系统运行中
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - heading "🇨🇳 中国 A股" [level=2] [ref=e31]
+          - generic [ref=e33]: 交易时间：09:30-11:30,13:00-15:00
+        - generic [ref=e21]: 🇨🇳
+      - generic [ref=e34]:
+        - button "🇨🇳 中国 A股" [ref=e35] [cursor=pointer]
+        - button "🇺🇸 美国" [ref=e36] [cursor=pointer]
+        - button "🇭🇰 香港" [ref=e37] [cursor=pointer]
+        - button "🇯🇵 日本" [ref=e38] [cursor=pointer]
+        - button "🇪🇺 欧洲" [ref=e39] [cursor=pointer]
+        - button "🇸🇬 新加坡" [ref=e40] [cursor=pointer]
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]: 市场主要指数/股票
+            - button "+ 添加" [ref=e27] [cursor=pointer]
+          - generic [ref=e28]:
+            - generic [ref=e41] [cursor=pointer]:
+              - generic [ref=e42]:
+                - generic [ref=e43]: 上证指数
+                - generic [ref=e44]: ^000001.SH
+              - button "×" [ref=e45]
+            - generic [ref=e46] [cursor=pointer]:
+              - generic [ref=e47]:
+                - generic [ref=e48]: 沪深300
+                - generic [ref=e49]: ^000300.SH
+              - button "×" [ref=e50]
+            - generic [ref=e51] [cursor=pointer]:
+              - generic [ref=e52]:
+                - generic [ref=e53]: 上证50
+                - generic [ref=e54]: ^000016.SH
+              - button "×" [ref=e55]
+            - generic [ref=e56] [cursor=pointer]:
+              - generic [ref=e57]:
+                - generic [ref=e58]: 深证成指
+                - generic [ref=e59]: ^399001.SZ
+              - button "×" [ref=e60]
+            - generic [ref=e61] [cursor=pointer]:
+              - generic [ref=e62]:
+                - generic [ref=e63]: 创业板指
+                - generic [ref=e64]: ^399006.SZ
+              - button "×" [ref=e65]
+            - generic [ref=e66] [cursor=pointer]:
+              - generic [ref=e67]:
+                - generic [ref=e68]: 科创50
+                - generic [ref=e69]: ^000688.SH
+              - button "×" [ref=e70]
+            - generic [ref=e71] [cursor=pointer]:
+              - generic [ref=e72]:
+                - generic [ref=e73]: 中证500
+                - generic [ref=e74]: ^000905.SH
+              - button "×" [ref=e75]
+            - generic [ref=e76] [cursor=pointer]:
+              - generic [ref=e77]:
+                - generic [ref=e78]: 中证1000
+                - generic [ref=e79]: ^000852.SH
+              - button "×" [ref=e80]
+            - generic [ref=e81] [cursor=pointer]:
+              - generic [ref=e82]:
+                - generic [ref=e83]: 中小板指
+                - generic [ref=e84]: ^399005.SZ
+              - button "×" [ref=e85]
+            - generic [ref=e86] [cursor=pointer]:
+              - generic [ref=e87]:
+                - generic [ref=e88]: 招商银行
+                - generic [ref=e89]: 600036.SH
+              - button "×" [ref=e90]
+        - generic [ref=e30]:
+          - generic [ref=e92]:
+            - button "真实数据" [ref=e93] [cursor=pointer]
+            - button "模拟数据" [ref=e94] [cursor=pointer]
+          - generic [ref=e96]:
+            - button "分时图" [ref=e97] [cursor=pointer]
+            - button "K线图" [ref=e98] [cursor=pointer]

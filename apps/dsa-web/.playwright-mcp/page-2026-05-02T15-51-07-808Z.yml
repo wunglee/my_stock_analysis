@@ -1,0 +1,85 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - complementary "桌面侧边导航" [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - img [ref=e9]
+          - paragraph [ref=e11]: DSA
+        - navigation "主导航" [ref=e12]:
+          - link "首页" [ref=e13] [cursor=pointer]:
+            - /url: /
+            - img [ref=e14]
+            - generic [ref=e17]: 首页
+          - link "问股" [ref=e18] [cursor=pointer]:
+            - /url: /chat
+            - img [ref=e19]
+            - generic [ref=e23]: 问股
+          - link "持仓" [ref=e24] [cursor=pointer]:
+            - /url: /portfolio
+            - img [ref=e25]
+            - generic [ref=e29]: 持仓
+          - link "回测" [ref=e30] [cursor=pointer]:
+            - /url: /backtest
+            - img [ref=e32]
+            - generic [ref=e34]: 回测
+          - link "设置" [ref=e35] [cursor=pointer]:
+            - /url: /settings
+            - img [ref=e36]
+            - generic [ref=e39]: 设置
+        - button "切换主题" [ref=e42]:
+          - img [ref=e43]
+          - generic [ref=e45]: 主题
+    - main [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - button "AI 回测" [ref=e50]
+            - button "纯技术回测" [ref=e51]
+          - generic [ref=e52]:
+            - textbox "按股票代码筛选（留空为全部）" [ref=e54]
+            - button "筛选" [disabled] [ref=e55]
+            - generic [ref=e56]:
+              - generic [ref=e57]: 窗口
+              - spinbutton [ref=e58]: "10"
+            - generic [ref=e59]:
+              - generic [ref=e60]: 从
+              - textbox "分析日期从" [ref=e61]
+            - generic [ref=e62]:
+              - generic [ref=e63]: 到
+              - textbox "分析日期到" [ref=e64]
+            - button "次日验证" [disabled] [ref=e65]: 次日验证
+            - button "强制重跑" [ref=e67] [cursor=pointer]: 强制重跑
+            - button "运行回测" [ref=e69] [cursor=pointer]
+          - paragraph [ref=e70]: 使用窗口 = 1 来对比 AI 预测与下一交易日收盘价。
+        - main [ref=e71]:
+          - generic [ref=e74]:
+            - generic [ref=e76]: 整体绩效
+            - generic [ref=e77]:
+              - generic [ref=e78]: 方向准确率
+              - generic [ref=e79]: "--"
+            - generic [ref=e80]:
+              - generic [ref=e81]: 胜率
+              - generic [ref=e82]: "--"
+            - generic [ref=e83]:
+              - generic [ref=e84]: 平均模拟收益
+              - generic [ref=e85]: "--"
+            - generic [ref=e86]:
+              - generic [ref=e87]: 平均股票收益
+              - generic [ref=e88]: "--"
+            - generic [ref=e89]:
+              - generic [ref=e90]: 止损触发率
+              - generic [ref=e91]: "--"
+            - generic [ref=e92]:
+              - generic [ref=e93]: 止盈触发率
+              - generic [ref=e94]: "--"
+            - generic [ref=e95]:
+              - generic [ref=e96]: 平均触及天数
+              - generic [ref=e97]: "--"
+            - generic [ref=e98]:
+              - generic [ref=e99]: 评估数
+              - generic [ref=e100]: 0 / 1
+            - generic [ref=e101]:
+              - generic [ref=e102]: 赢/输/平
+              - generic [ref=e103]: 0 / 0 / 0
+          - paragraph [ref=e107]: 加载结果中...
+  - generic [ref=e108]: "请求失败: HTTP 404: Not Found"

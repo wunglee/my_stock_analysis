@@ -1,0 +1,185 @@
+- generic [ref=e4]:
+  - complementary "桌面侧边导航" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img [ref=e9]
+        - paragraph [ref=e11]: DSA
+      - navigation "主导航" [ref=e12]:
+        - link "首页" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e15]
+          - generic [ref=e18]: 首页
+        - link "问股" [ref=e19] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e20]
+          - generic [ref=e24]: 问股
+        - link "持仓" [active] [ref=e25] [cursor=pointer]:
+          - /url: /portfolio
+          - img [ref=e26]
+          - generic [ref=e30]: 持仓
+        - link "回测" [ref=e31] [cursor=pointer]:
+          - /url: /backtest
+          - img [ref=e32]
+          - generic [ref=e34]: 回测
+        - link "设置" [ref=e35] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e36]
+          - generic [ref=e39]: 设置
+      - button "切换主题" [ref=e42]:
+        - img [ref=e43]
+        - generic [ref=e45]: 主题
+  - main [ref=e46]:
+    - generic [ref=e243]:
+      - generic [ref=e244]:
+        - generic [ref=e245]:
+          - heading "持仓管理" [level=1] [ref=e246]
+          - paragraph [ref=e247]: 组合快照、手工录入、CSV 导入与风险分析（支持全组合 / 单账户切换）
+        - generic [ref=e249]:
+          - generic [ref=e250]:
+            - paragraph [ref=e251]: 账户视图
+            - combobox [ref=e252]:
+              - option "全部账户" [selected]
+              - option "wunglee (#1)"
+          - generic [ref=e253]:
+            - paragraph [ref=e254]: 成本口径
+            - combobox [ref=e255]:
+              - option "先进先出（FIFO）" [selected]
+              - option "均价成本（AVG）"
+          - generic [ref=e256]:
+            - button "新建账户" [ref=e257] [cursor=pointer]
+            - button "刷新数据" [ref=e258] [cursor=pointer]
+      - generic [ref=e259]:
+        - generic [ref=e261]:
+          - paragraph [ref=e262]: 总权益
+          - paragraph [ref=e263]: CNY 0.00
+        - generic [ref=e265]:
+          - paragraph [ref=e266]: 总市值
+          - paragraph [ref=e267]: CNY 0.00
+        - generic [ref=e269]:
+          - paragraph [ref=e270]: 总现金
+          - paragraph [ref=e271]: CNY 0.00
+        - generic [ref=e273]:
+          - generic [ref=e274]:
+            - paragraph [ref=e275]: 汇率状态
+            - button "刷新汇率" [ref=e276] [cursor=pointer]
+          - generic [ref=e278]: 最新
+      - generic [ref=e279]:
+        - generic [ref=e280]:
+          - generic [ref=e281]:
+            - heading "持仓明细" [level=2] [ref=e282]
+            - generic [ref=e283]: 共 0 项
+          - generic [ref=e284]:
+            - heading "当前无持仓数据" [level=3] [ref=e285]
+            - paragraph [ref=e286]: 录入交易或导入 CSV 后，这里会展示按账户汇总的持仓明细。
+        - generic [ref=e287]:
+          - heading "行业数据暂不可用，当前展示个股集中度" [level=2] [ref=e288]
+          - generic [ref=e289]:
+            - heading "暂无集中度数据" [level=3] [ref=e290]
+            - paragraph [ref=e291]: 风险模块完成计算后，这里会展示行业或个股维度的集中度分布。
+          - generic [ref=e292]:
+            - generic [ref=e293]: "展示口径: 个股维度（降级显示）"
+            - generic [ref=e294]: "板块集中度告警: 否"
+            - generic [ref=e295]: "Top1 权重: 0.00%"
+      - alert [ref=e296]:
+        - generic [ref=e299]: 当前处于“全部账户”视图。为避免误写，请先选择一个具体账户后再进行手工录入或 CSV 提交。
+      - generic [ref=e300]:
+        - generic [ref=e301]:
+          - heading "回撤监控" [level=3] [ref=e302]
+          - generic [ref=e303]:
+            - generic [ref=e304]: "最大回撤: 0.00%"
+            - generic [ref=e305]: "当前回撤: 0.00%"
+            - generic [ref=e306]: "告警: 否"
+        - generic [ref=e307]:
+          - heading "止损接近预警" [level=3] [ref=e308]
+          - generic [ref=e309]:
+            - generic [ref=e310]: "触发数: 0"
+            - generic [ref=e311]: "接近数: 0"
+            - generic [ref=e312]: "告警: 否"
+        - generic [ref=e313]:
+          - heading "口径" [level=3] [ref=e314]
+          - generic [ref=e315]:
+            - generic [ref=e316]: "账户数: 1"
+            - generic [ref=e317]: "计价币种: CNY"
+            - generic [ref=e318]: "成本法: FIFO"
+      - generic [ref=e319]:
+        - generic [ref=e320]:
+          - heading "手工录入：交易" [level=3] [ref=e321]
+          - generic [ref=e322]:
+            - combobox "股票代码（例如 600519）" [disabled] [ref=e324]
+            - generic [ref=e325]:
+              - textbox [ref=e326]: 2026-05-03
+              - combobox [ref=e327]:
+                - option "买入" [selected]
+                - option "卖出"
+            - generic [ref=e328]:
+              - spinbutton [ref=e329]
+              - spinbutton [ref=e330]
+            - generic [ref=e331]:
+              - spinbutton [ref=e332]
+              - spinbutton [ref=e333]
+            - paragraph [ref=e334]: 手续费和税费可留空，系统将按 0 处理。
+            - button "提交交易" [disabled] [ref=e335]
+        - generic [ref=e336]:
+          - heading "手工录入：资金流水" [level=3] [ref=e337]
+          - generic [ref=e338]:
+            - generic [ref=e339]:
+              - textbox [ref=e340]: 2026-05-03
+              - combobox [ref=e341]:
+                - option "流入" [selected]
+                - option "流出"
+            - spinbutton [ref=e342]
+            - textbox "币种（可选，默认 账户基准币）" [ref=e343]
+            - button "提交资金流水" [disabled] [ref=e344]
+        - generic [ref=e345]:
+          - heading "手工录入：公司行为" [level=3] [ref=e346]
+          - generic [ref=e347]:
+            - combobox "股票代码" [disabled] [ref=e349]
+            - generic [ref=e350]:
+              - textbox [ref=e351]: 2026-05-03
+              - combobox [ref=e352]:
+                - option "现金分红" [selected]
+                - option "拆并股调整"
+            - spinbutton [ref=e353]
+            - button "提交企业行为" [disabled] [ref=e354]
+      - generic [ref=e355]:
+        - generic [ref=e356]:
+          - heading "券商 CSV 导入" [level=3] [ref=e357]
+          - generic [ref=e358]:
+            - generic [ref=e359]:
+              - combobox [ref=e360]:
+                - option "citic（中信）"
+                - option "cmb（招商）"
+                - option "huatai（华泰）" [selected]
+              - generic [ref=e361] [cursor=pointer]: 选择 CSV
+            - generic [ref=e362]:
+              - checkbox "仅预演（不写入）" [checked] [ref=e363]
+              - generic [ref=e364]: 仅预演（不写入）
+            - generic [ref=e365]:
+              - button "解析文件" [disabled] [ref=e366]
+              - button "提交导入" [disabled] [ref=e367]
+        - generic [ref=e368]:
+          - heading "事件记录" [level=3] [ref=e369]
+          - generic [ref=e370]:
+            - generic [ref=e371]:
+              - combobox [ref=e372]:
+                - option "交易流水" [selected]
+                - option "资金流水"
+                - option "公司行为"
+              - button "刷新流水" [ref=e373] [cursor=pointer]
+            - generic [ref=e374]:
+              - textbox [ref=e375]
+              - textbox [ref=e376]
+            - combobox "按股票代码筛选" [ref=e378]
+            - combobox [ref=e379]:
+              - option "全部买卖方向" [selected]
+              - option "买入"
+              - option "卖出"
+            - generic [ref=e380]: 删除修正仅在单账户视图可用。请先选择具体账户后再删除错误流水。
+            - generic [ref=e382]:
+              - heading "暂无流水" [level=3] [ref=e383]
+              - paragraph [ref=e384]: 调整筛选条件或先录入一笔交易、资金流水或公司行为。
+            - generic [ref=e385]:
+              - generic [ref=e386]: 第 1 / 1 页
+              - generic [ref=e387]:
+                - button "上一页" [disabled] [ref=e388]
+                - button "下一页" [disabled] [ref=e389]

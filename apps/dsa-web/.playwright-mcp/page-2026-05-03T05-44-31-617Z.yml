@@ -1,0 +1,277 @@
+- generic [ref=e4]:
+  - complementary "桌面侧边导航" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img [ref=e9]
+        - paragraph [ref=e11]: DSA
+      - navigation "主导航" [ref=e12]:
+        - link "首页" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e15]
+          - generic [ref=e18]: 首页
+        - link "问股" [ref=e19] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e20]
+          - generic [ref=e24]: 问股
+        - link "持仓" [ref=e25] [cursor=pointer]:
+          - /url: /portfolio
+          - img [ref=e26]
+          - generic [ref=e30]: 持仓
+        - link "回测" [ref=e31] [cursor=pointer]:
+          - /url: /backtest
+          - img [ref=e32]
+          - generic [ref=e34]: 回测
+        - link "设置" [ref=e35] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e36]
+          - generic [ref=e39]: 设置
+      - button "切换主题" [ref=e42]:
+        - img [ref=e43]
+        - generic [ref=e45]: 主题
+  - main [ref=e46]:
+    - generic [ref=e242]:
+      - generic [ref=e243]:
+        - generic [ref=e244]:
+          - button "AI 回测" [ref=e245]
+          - button "纯技术回测" [ref=e246]
+        - generic [ref=e247]:
+          - textbox "输入股票代码，逗号分隔（如：600519,000858）" [ref=e345]: "600519"
+          - generic [ref=e346]:
+            - generic [ref=e347]: 从
+            - textbox "开始日期" [ref=e348]: 2024-01-01
+          - generic [ref=e252]:
+            - generic [ref=e253]: 到
+            - textbox "结束日期" [ref=e349]: 2024-06-01
+          - generic [ref=e255]:
+            - generic [ref=e256]: 窗口
+            - spinbutton [ref=e350]: "10"
+          - button "运行纯技术回测" [ref=e351] [cursor=pointer]
+      - main [ref=e267]:
+        - generic [ref=e362]:
+          - generic [ref=e364]: 纯技术回测概览
+          - generic [ref=e365]:
+            - generic [ref=e366]:
+              - generic [ref=e367]: 股票数
+              - generic [ref=e368]: "2"
+            - generic [ref=e369]:
+              - generic [ref=e370]: 日期范围
+              - generic [ref=e371]: 2024-01-01 ~ 2024-06-01
+            - generic [ref=e372]:
+              - generic [ref=e373]: 评估窗口
+              - generic [ref=e374]: 10 天
+          - generic [ref=e375]:
+            - generic [ref=e376]: 跨股票相关性
+            - generic [ref=e377]:
+              - generic [ref=e378]: 600519 ↔ 000858
+              - generic [ref=e379]: "0.72"
+        - generic [ref=e380]:
+          - generic [ref=e382]:
+            - generic [ref=e383]: 纯技术回测结果
+            - generic [ref=e384]: 600519, 000858 · 2024-01-01 ~ 2024-06-01
+          - generic [ref=e385]:
+            - generic [ref=e386]:
+              - generic [ref=e387] [cursor=pointer]:
+                - generic [ref=e388]:
+                  - generic [ref=e389]: "600519"
+                  - generic [ref=e390]: 贵州茅台
+                  - generic [ref=e391]: 2024-01-01 ~ 2024-06-01
+                - generic [ref=e392]:
+                  - generic [ref=e393]: 信号 45
+                  - generic [ref=e394]:
+                    - text: 胜率
+                    - generic [ref=e395]: 58%
+                  - generic [ref=e396]:
+                    - text: 均收
+                    - generic [ref=e397]: +2.3%
+                  - generic [ref=e398]:
+                    - text: 回撤
+                    - generic [ref=e399]: "-5.2%"
+                  - img [ref=e400]
+              - generic [ref=e418]:
+                - generic [ref=e419]:
+                  - heading "K线信号叠加" [level=4] [ref=e420]
+                  - generic [ref=e423]:
+                    - generic [ref=e424]:
+                      - generic [ref=e425]:
+                        - generic [ref=e426]:
+                          - button "日" [ref=e427] [cursor=pointer]
+                          - button "周" [ref=e428] [cursor=pointer]
+                          - button "月" [ref=e429] [cursor=pointer]
+                        - button "筹码" [ref=e430] [cursor=pointer]
+                      - generic [ref=e435]:
+                        - button "VOL" [ref=e436] [cursor=pointer]
+                        - button "MACD" [ref=e437] [cursor=pointer]
+                        - button "RSI" [ref=e438] [cursor=pointer]
+                        - button "KDJ" [ref=e439] [cursor=pointer]
+                        - button "OBV" [ref=e440] [cursor=pointer]
+                    - generic [ref=e447]: 筹码分布
+                - generic [ref=e448]:
+                  - heading "发现规律" [level=4] [ref=e449]
+                  - generic [ref=e450]:
+                    - generic [ref=e451]:
+                      - generic [ref=e452]:
+                        - generic [ref=e453]: MA20支撑
+                        - generic [ref=e454]: 价格触及MA20±0.5%
+                      - generic [ref=e455]:
+                        - generic [ref=e456]: 样本 23
+                        - generic [ref=e457]: 胜率 65%
+                        - generic [ref=e458]: 置信 78%
+                    - generic [ref=e459]:
+                      - generic [ref=e460]:
+                        - generic [ref=e461]: 缩量回调
+                        - generic [ref=e462]: 量比<0.8且价格回踩MA5
+                      - generic [ref=e463]:
+                        - generic [ref=e464]: 样本 18
+                        - generic [ref=e465]: 胜率 72%
+                        - generic [ref=e466]: 置信 82%
+                    - generic [ref=e467]:
+                      - generic [ref=e468]:
+                        - generic [ref=e469]: 放量突破
+                        - generic [ref=e470]: 量比>2且价格突破前高
+                      - generic [ref=e471]:
+                        - generic [ref=e472]: 样本 15
+                        - generic [ref=e473]: 胜率 60%
+                        - generic [ref=e474]: 置信 65%
+                - generic [ref=e475]:
+                  - heading "交易信号" [level=4] [ref=e476]
+                  - table [ref=e478]:
+                    - rowgroup [ref=e479]:
+                      - row "日期 操作 入场价 止损 止盈 理由 置信" [ref=e480]:
+                        - columnheader "日期" [ref=e481]
+                        - columnheader "操作" [ref=e482]
+                        - columnheader "入场价" [ref=e483]
+                        - columnheader "止损" [ref=e484]
+                        - columnheader "止盈" [ref=e485]
+                        - columnheader "理由" [ref=e486]
+                        - columnheader "置信" [ref=e487]
+                    - rowgroup [ref=e488]:
+                      - row "2024-03-15 买入 1680 1620 1780 多头排列, 缩量回调 82%" [ref=e489]:
+                        - cell "2024-03-15" [ref=e490]
+                        - cell "买入" [ref=e491]:
+                          - generic [ref=e492]: 买入
+                        - cell "1680" [ref=e493]
+                        - cell "1620" [ref=e494]
+                        - cell "1780" [ref=e495]
+                        - cell "多头排列, 缩量回调" [ref=e496]
+                        - cell "82%" [ref=e497]:
+                          - generic [ref=e498]: 82%
+                      - row "2024-03-28 买入 1705 1650 1800 MA20支撑, 缩量回调 75%" [ref=e499]:
+                        - cell "2024-03-28" [ref=e500]
+                        - cell "买入" [ref=e501]:
+                          - generic [ref=e502]: 买入
+                        - cell "1705" [ref=e503]
+                        - cell "1650" [ref=e504]
+                        - cell "1800" [ref=e505]
+                        - cell "MA20支撑, 缩量回调" [ref=e506]
+                        - cell "75%" [ref=e507]:
+                          - generic [ref=e508]: 75%
+                      - row "2024-04-02 卖出 -- -- -- 跌破MA20, 放量下跌 75%" [ref=e509]:
+                        - cell "2024-04-02" [ref=e510]
+                        - cell "卖出" [ref=e511]:
+                          - generic [ref=e512]: 卖出
+                        - cell "--" [ref=e513]
+                        - cell "--" [ref=e514]
+                        - cell "--" [ref=e515]
+                        - cell "跌破MA20, 放量下跌" [ref=e516]
+                        - cell "75%" [ref=e517]:
+                          - generic [ref=e518]: 75%
+                      - row "2024-04-18 观望 -- -- -- 均线缠绕, 量能萎缩 60%" [ref=e519]:
+                        - cell "2024-04-18" [ref=e520]
+                        - cell "观望" [ref=e521]:
+                          - generic [ref=e522]: 观望
+                        - cell "--" [ref=e523]
+                        - cell "--" [ref=e524]
+                        - cell "--" [ref=e525]
+                        - cell "均线缠绕, 量能萎缩" [ref=e526]
+                        - cell "60%" [ref=e527]:
+                          - generic [ref=e528]: 60%
+                - generic [ref=e529]:
+                  - heading "回测验证" [level=4] [ref=e530]
+                  - table [ref=e532]:
+                    - rowgroup [ref=e533]:
+                      - row "信号日 操作 结果 收益 方向 止损 止盈" [ref=e534]:
+                        - columnheader "信号日" [ref=e535]
+                        - columnheader "操作" [ref=e536]
+                        - columnheader "结果" [ref=e537]
+                        - columnheader "收益" [ref=e538]
+                        - columnheader "方向" [ref=e539]
+                        - columnheader "止损" [ref=e540]
+                        - columnheader "止盈" [ref=e541]
+                    - rowgroup [ref=e542]:
+                      - row "2024-03-15 buy 赢 +3.5% 是 否 是" [ref=e543]:
+                        - cell "2024-03-15" [ref=e544]
+                        - cell "buy" [ref=e545]
+                        - cell "赢" [ref=e546]:
+                          - generic [ref=e547]: 赢
+                        - cell "+3.5%" [ref=e548]
+                        - cell "是" [ref=e549]:
+                          - generic "是" [ref=e550]:
+                            - img [ref=e552]
+                        - cell "否" [ref=e554]:
+                          - generic "否" [ref=e555]:
+                            - img [ref=e557]
+                        - cell "是" [ref=e560]:
+                          - generic "是" [ref=e561]:
+                            - img [ref=e563]
+                      - row "2024-03-28 buy 赢 +2.8% 是 否 否" [ref=e565]:
+                        - cell "2024-03-28" [ref=e566]
+                        - cell "buy" [ref=e567]
+                        - cell "赢" [ref=e568]:
+                          - generic [ref=e569]: 赢
+                        - cell "+2.8%" [ref=e570]
+                        - cell "是" [ref=e571]:
+                          - generic "是" [ref=e572]:
+                            - img [ref=e574]
+                        - cell "否" [ref=e576]:
+                          - generic "否" [ref=e577]:
+                            - img [ref=e579]
+                        - cell "否" [ref=e582]:
+                          - generic "否" [ref=e583]:
+                            - img [ref=e585]
+                      - row "2024-04-02 sell 输 -1.2% 否 是 否" [ref=e588]:
+                        - cell "2024-04-02" [ref=e589]
+                        - cell "sell" [ref=e590]
+                        - cell "输" [ref=e591]:
+                          - generic [ref=e592]: 输
+                        - cell "-1.2%" [ref=e593]
+                        - cell "否" [ref=e594]:
+                          - generic "否" [ref=e595]:
+                            - img [ref=e597]
+                        - cell "是" [ref=e600]:
+                          - generic "是" [ref=e601]:
+                            - img [ref=e603]
+                        - cell "否" [ref=e605]:
+                          - generic "否" [ref=e606]:
+                            - img [ref=e608]
+                      - row "2024-04-18 wait 平 +0.5% 是 否 否" [ref=e611]:
+                        - cell "2024-04-18" [ref=e612]
+                        - cell "wait" [ref=e613]
+                        - cell "平" [ref=e614]:
+                          - generic [ref=e615]: 平
+                        - cell "+0.5%" [ref=e616]
+                        - cell "是" [ref=e617]:
+                          - generic "是" [ref=e618]:
+                            - img [ref=e620]
+                        - cell "否" [ref=e622]:
+                          - generic "否" [ref=e623]:
+                            - img [ref=e625]
+                        - cell "否" [ref=e628]:
+                          - generic "否" [ref=e629]:
+                            - img [ref=e631]
+            - generic [ref=e403] [cursor=pointer]:
+              - generic [ref=e404]:
+                - generic [ref=e405]: "000858"
+                - generic [ref=e406]: 五粮液
+                - generic [ref=e407]: 2024-01-01 ~ 2024-06-01
+              - generic [ref=e408]:
+                - generic [ref=e409]: 信号 38
+                - generic [ref=e410]:
+                  - text: 胜率
+                  - generic [ref=e411]: 55%
+                - generic [ref=e412]:
+                  - text: 均收
+                  - generic [ref=e413]: +1.9%
+                - generic [ref=e414]:
+                  - text: 回撤
+                  - generic [ref=e415]: "-4.8%"
+                - img [ref=e416]

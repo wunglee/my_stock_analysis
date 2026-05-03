@@ -1,0 +1,125 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - complementary "桌面侧边导航" [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - img [ref=e9]
+          - paragraph [ref=e11]: DSA
+        - navigation "主导航" [ref=e12]:
+          - link "首页" [ref=e13] [cursor=pointer]:
+            - /url: /
+            - img [ref=e15]
+            - generic [ref=e18]: 首页
+          - link "问股" [ref=e19] [cursor=pointer]:
+            - /url: /chat
+            - img [ref=e20]
+            - generic [ref=e24]: 问股
+          - link "持仓" [ref=e25] [cursor=pointer]:
+            - /url: /portfolio
+            - img [ref=e26]
+            - generic [ref=e30]: 持仓
+          - link "回测" [ref=e31] [cursor=pointer]:
+            - /url: /backtest
+            - img [ref=e32]
+            - generic [ref=e34]: 回测
+          - link "设置" [ref=e35] [cursor=pointer]:
+            - /url: /settings
+            - img [ref=e36]
+            - generic [ref=e39]: 设置
+        - button "切换主题" [ref=e42]:
+          - img [ref=e43]
+          - generic [ref=e45]: 主题
+    - main [ref=e46]:
+      - generic [ref=e268]:
+        - generic [ref=e269]:
+          - generic [ref=e270]:
+            - button "AI 回测" [ref=e271]
+            - button "纯技术回测" [ref=e272]
+          - generic [ref=e273]:
+            - combobox "按股票代码筛选（留空为全部）" [ref=e276]
+            - button "筛选" [ref=e277] [cursor=pointer]
+            - generic [ref=e278]:
+              - generic [ref=e279]: 窗口
+              - spinbutton [ref=e280]: "10"
+            - generic [ref=e281]:
+              - generic [ref=e282]: 从
+              - textbox "分析日期从" [ref=e283]
+            - generic [ref=e284]:
+              - generic [ref=e285]: 到
+              - textbox "分析日期到" [ref=e286]
+            - button "次日验证" [ref=e287] [cursor=pointer]: 次日验证
+            - button "强制重跑" [ref=e289] [cursor=pointer]: 强制重跑
+            - button "运行回测" [ref=e291] [cursor=pointer]
+          - paragraph [ref=e292]: 使用窗口 = 1 来对比 AI 预测与下一交易日收盘价。
+        - main [ref=e293]:
+          - generic [ref=e296]:
+            - generic [ref=e298]: 整体绩效
+            - generic [ref=e299]:
+              - generic [ref=e300]: 方向准确率
+              - generic [ref=e301]: "--"
+            - generic [ref=e302]:
+              - generic [ref=e303]: 胜率
+              - generic [ref=e304]: "--"
+            - generic [ref=e305]:
+              - generic [ref=e306]: 平均模拟收益
+              - generic [ref=e307]: "--"
+            - generic [ref=e308]:
+              - generic [ref=e309]: 平均股票收益
+              - generic [ref=e310]: "--"
+            - generic [ref=e311]:
+              - generic [ref=e312]: 止损触发率
+              - generic [ref=e313]: "--"
+            - generic [ref=e314]:
+              - generic [ref=e315]: 止盈触发率
+              - generic [ref=e316]: "--"
+            - generic [ref=e317]:
+              - generic [ref=e318]: 平均触及天数
+              - generic [ref=e319]: "--"
+            - generic [ref=e320]:
+              - generic [ref=e321]: 评估数
+              - generic [ref=e322]: 0 / 1
+            - generic [ref=e323]:
+              - generic [ref=e324]: 赢/输/平
+              - generic [ref=e325]: 0 / 0 / 0
+          - generic [ref=e327]:
+            - generic [ref=e328]:
+              - generic [ref=e329]:
+                - generic [ref=e330]: 结果集
+                - generic [ref=e331]: 全部股票 · 10 天窗口
+              - generic [ref=e332]: 小屏幕请横向滚动
+            - table [ref=e334]:
+              - rowgroup [ref=e335]:
+                - row "股票 分析日期 AI 预测 窗口收益 方向匹配 结果 状态" [ref=e336]:
+                  - columnheader "股票" [ref=e337]
+                  - columnheader "分析日期" [ref=e338]
+                  - columnheader "AI 预测" [ref=e339]
+                  - columnheader "窗口收益" [ref=e340]
+                  - columnheader "方向匹配" [ref=e341]
+                  - columnheader "结果" [ref=e342]
+                  - columnheader "状态" [ref=e343]
+              - rowgroup [ref=e344]:
+                - row "03750.HK 宁德时代 2026-04-30 弱势空头，连续跌破MA5/MA10/MA20，箱体向下有效突破，短期下行风险为主 减仓/卖出 -- -- 未知 down -- 数据不足" [ref=e345]:
+                  - cell "03750.HK 宁德时代" [ref=e346]:
+                    - generic [ref=e347]:
+                      - generic [ref=e348]: 03750.HK
+                      - generic [ref=e349]: 宁德时代
+                  - cell "2026-04-30" [ref=e350]
+                  - cell "弱势空头，连续跌破MA5/MA10/MA20，箱体向下有效突破，短期下行风险为主 减仓/卖出" [ref=e351]:
+                    - generic [ref=e353]:
+                      - generic [ref=e354]: 弱势空头，连续跌破MA5/MA10/MA20，箱体向下有效突破，短期下行风险为主
+                      - generic [ref=e355]: 减仓/卖出
+                  - cell "-- --" [ref=e356]:
+                    - generic [ref=e357]:
+                      - generic [ref=e358]: "--"
+                      - generic [ref=e359]: "--"
+                  - cell "未知 down" [ref=e360]:
+                    - generic [ref=e361]:
+                      - generic "未知" [ref=e362]:
+                        - img [ref=e364]
+                      - generic [ref=e365]: down
+                  - cell "--" [ref=e366]:
+                    - generic [ref=e367]: "--"
+                  - cell "数据不足" [ref=e368]:
+                    - generic [ref=e369]: 数据不足
+            - paragraph [ref=e370]: 共 1 条结果 · 第 1 页，共 1 页
+  - tooltip "弱势空头，连续跌破MA5/MA10/MA20，箱体向下有效突破，短期下行风险为主 / 减仓/卖出"

@@ -1,0 +1,160 @@
+- generic [ref=e6]:
+  - complementary "桌面侧边导航" [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - img [ref=e11]
+        - paragraph [ref=e13]: DSA
+      - navigation "主导航" [ref=e14]:
+        - link "首页" [ref=e15] [cursor=pointer]:
+          - /url: /
+          - img [ref=e17]
+          - generic [ref=e20]: 首页
+        - link "问股" [ref=e21] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e22]
+          - generic [ref=e26]: 问股
+        - link "持仓" [ref=e27] [cursor=pointer]:
+          - /url: /portfolio
+          - img [ref=e28]
+          - generic [ref=e32]: 持仓
+        - link "回测" [ref=e33] [cursor=pointer]:
+          - /url: /backtest
+          - img [ref=e34]
+          - generic [ref=e36]: 回测
+        - link "设置" [ref=e37] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e38]
+          - generic [ref=e41]: 设置
+      - button "切换主题" [ref=e44]:
+        - img [ref=e45]
+        - generic [ref=e47]: 主题
+  - main [ref=e48]:
+    - generic [ref=e50]:
+      - generic [ref=e52]:
+        - combobox "输入股票代码或名称，如 600519、贵州茅台、AAPL" [ref=e55]
+        - generic [ref=e56] [cursor=pointer]:
+          - checkbox "推送通知" [checked] [ref=e57]
+          - text: 推送通知
+        - button "分析" [disabled] [ref=e58]
+      - generic [ref=e59]:
+        - complementary [ref=e62]:
+          - generic [ref=e64]:
+            - generic [ref=e65]:
+              - generic [ref=e67]:
+                - img [ref=e69]
+                - heading "历史分析" [level=3] [ref=e71]
+              - generic [ref=e72]:
+                - generic [ref=e73] [cursor=pointer]:
+                  - checkbox "全选当前已加载历史记录" [ref=e74]
+                  - generic [ref=e75]: 全选当前
+                - button "删除" [disabled]
+            - generic [ref=e76]:
+              - generic [ref=e77]:
+                - checkbox [ref=e79] [cursor=pointer]
+                - button "宁德时代 减仓 30 03750.HK 2026/05/02 16:26" [ref=e80]:
+                  - generic [ref=e83]:
+                    - generic [ref=e84]:
+                      - generic [ref=e86]: 宁德时代
+                      - generic [ref=e87]: 减仓 30
+                    - generic [ref=e88]:
+                      - generic [ref=e89]: 03750.HK
+                      - generic [ref=e91]: 2026/05/02 16:26
+              - generic [ref=e92]:
+                - checkbox [ref=e94] [cursor=pointer]
+                - button "江西铜业 减仓 35 600362.SH 2026/05/02 16:13" [ref=e95]:
+                  - generic [ref=e98]:
+                    - generic [ref=e99]:
+                      - generic [ref=e101]: 江西铜业
+                      - generic [ref=e102]: 减仓 35
+                    - generic [ref=e103]:
+                      - generic [ref=e104]: 600362.SH
+                      - generic [ref=e106]: 2026/05/02 16:13
+              - generic [ref=e108]: 已到底部
+        - generic [ref=e111]:
+          - generic [ref=e112]:
+            - button "重新分析" [ref=e113] [cursor=pointer]:
+              - img [ref=e114]
+              - text: 重新分析
+            - button "追问 AI" [ref=e116] [cursor=pointer]:
+              - img [ref=e117]
+              - text: 追问 AI
+            - button "完整分析报告" [ref=e119] [cursor=pointer]:
+              - img [ref=e120]
+              - text: 完整分析报告
+          - generic [ref=e122]:
+            - generic [ref=e124]:
+              - generic [ref=e125]:
+                - generic [ref=e127]:
+                  - generic [ref=e129]:
+                    - heading "宁德时代" [level=2] [ref=e131]
+                    - generic [ref=e132]:
+                      - generic [ref=e133]: 03750.HK
+                      - generic [ref=e134]:
+                        - img [ref=e135]
+                        - text: 2026/05/02 16:26
+                  - generic [ref=e137]:
+                    - generic [ref=e138]: 核心洞察
+                    - paragraph [ref=e139]: 宁德时代H股（03750.HK）自4月高点745下跌至608（约-18%），期间H股配售融资完成带来稀释压力，成交量连续放大显示主力抛售。技术面：均线空头排列（MA5<MA10<MA20），箱体（648~745）向下有效跌破，按箱体战法应离场观望。基本面：Q1业绩极亮眼但未能阻止股价下跌，市场短期更关注筹码压力而非基本面。RSI_6=3.57属历史级超卖，技术反弹可能随时出现，但趋势已转为空头，反弹高度预计有限（阻力647/648）。…
+                - generic [ref=e140]:
+                  - generic [ref=e142] [cursor=pointer]:
+                    - img [ref=e144]
+                    - generic [ref=e146]:
+                      - heading "操作建议" [level=4] [ref=e147]
+                      - paragraph [ref=e148]: 减仓
+                  - generic [ref=e150] [cursor=pointer]:
+                    - img [ref=e152]
+                    - generic [ref=e154]:
+                      - heading "趋势预测" [level=4] [ref=e155]
+                      - paragraph [ref=e156]: 弱势空头，连续跌破MA5/MA10/MA20，箱体向下有效突破，短期下行风险为主
+              - generic [ref=e159]:
+                - heading "市场情绪" [level=3] [ref=e160]
+                - generic [ref=e161]:
+                  - generic [ref=e162]: 恐惧贪婪指数
+                  - generic [ref=e163]:
+                    - img [ref=e164]
+                    - generic [ref=e168]:
+                      - generic [ref=e169]: "30"
+                      - generic [ref=e170]: 悲观
+            - generic [ref=e171]:
+              - generic [ref=e173]:
+                - generic [ref=e174]: 策略点位
+                - heading "狙击点位" [level=3] [ref=e175]
+              - generic [ref=e176]:
+                - generic [ref=e178]:
+                  - generic [ref=e179]: 理想买入
+                  - generic [ref=e180]: "585.7"
+                - generic [ref=e183]:
+                  - generic [ref=e184]: 二次买入
+                  - generic [ref=e185]: —
+                - generic [ref=e188]:
+                  - generic [ref=e189]: 止损价位
+                  - generic [ref=e190]: "583.0"
+                - generic [ref=e193]:
+                  - generic [ref=e194]: 止盈目标
+                  - generic [ref=e195]: "647.0"
+            - generic [ref=e197]:
+              - generic [ref=e198]:
+                - generic [ref=e199]:
+                  - generic [ref=e200]: 资讯动态
+                  - heading "相关资讯" [level=3] [ref=e201]
+                - button "刷新" [ref=e204]
+              - generic [ref=e205]:
+                - img [ref=e207]
+                - generic [ref=e209]:
+                  - paragraph [ref=e210]: 暂无相关资讯
+                  - paragraph [ref=e211]: 可稍后刷新以获取最新资讯。
+            - generic [ref=e212]:
+              - generic [ref=e214]:
+                - generic [ref=e215]: 透明度
+                - heading "数据追溯" [level=3] [ref=e216]
+              - generic [ref=e217]:
+                - generic [ref=e218]: "记录 ID:"
+                - code [ref=e219]: "2"
+              - generic [ref=e220]:
+                - button "原始分析结果" [ref=e222]:
+                  - generic [ref=e223]: 原始分析结果
+                  - img [ref=e224]
+                - button "分析快照" [ref=e227]:
+                  - generic [ref=e228]: 分析快照
+                  - img [ref=e229]
+            - paragraph [ref=e231]: "分析模型: deepseek/deepseek-chat"

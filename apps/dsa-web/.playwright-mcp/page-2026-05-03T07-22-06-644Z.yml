@@ -1,0 +1,178 @@
+- generic [ref=e4]:
+  - complementary "桌面侧边导航" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img [ref=e9]
+        - paragraph [ref=e11]: DSA
+      - navigation "主导航" [ref=e12]:
+        - link "首页" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e15]
+          - generic [ref=e18]: 首页
+        - link "问股" [ref=e19] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e20]
+          - generic [ref=e24]: 问股
+        - link "持仓" [ref=e25] [cursor=pointer]:
+          - /url: /portfolio
+          - img [ref=e26]
+          - generic [ref=e30]: 持仓
+        - link "回测" [ref=e31] [cursor=pointer]:
+          - /url: /backtest
+          - img [ref=e32]
+          - generic [ref=e34]: 回测
+        - link "设置" [ref=e35] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e36]
+          - generic [ref=e39]: 设置
+      - button "切换主题" [ref=e42]:
+        - img [ref=e43]
+        - generic [ref=e45]: 主题
+  - main [ref=e46]:
+    - generic [ref=e373]:
+      - generic [ref=e375]:
+        - combobox "输入股票代码或名称，如 600519、贵州茅台、AAPL" [ref=e378]
+        - generic [ref=e379] [cursor=pointer]:
+          - checkbox "推送通知" [checked] [ref=e380]
+          - text: 推送通知
+        - button "分析" [disabled] [ref=e381]
+      - generic [ref=e382]:
+        - complementary [ref=e385]:
+          - generic [ref=e387]:
+            - generic [ref=e388]:
+              - generic [ref=e390]:
+                - img [ref=e392]
+                - heading "历史分析" [level=3] [ref=e394]
+              - generic [ref=e395]:
+                - generic [ref=e396] [cursor=pointer]:
+                  - checkbox "全选当前已加载历史记录" [ref=e397]
+                  - generic [ref=e398]: 全选当前
+                - button "删除" [disabled]
+            - generic [ref=e399]:
+              - generic [ref=e400]:
+                - checkbox [ref=e402] [cursor=pointer]
+                - button "贵州茅台 减仓 32 600519.SH 2026/05/03 15:01" [active] [ref=e403]:
+                  - generic [ref=e406]:
+                    - generic [ref=e407]:
+                      - generic [ref=e409]: 贵州茅台
+                      - generic [ref=e410]: 减仓 32
+                    - generic [ref=e411]:
+                      - generic [ref=e412]: 600519.SH
+                      - generic [ref=e414]: 2026/05/03 15:01
+              - generic [ref=e415]:
+                - checkbox [ref=e417] [cursor=pointer]
+                - button "宁德时代 减仓 30 03750.HK 2026/05/02 16:26" [ref=e418]:
+                  - generic [ref=e421]:
+                    - generic [ref=e422]:
+                      - generic [ref=e424]: 宁德时代
+                      - generic [ref=e425]: 减仓 30
+                    - generic [ref=e426]:
+                      - generic [ref=e427]: 03750.HK
+                      - generic [ref=e429]: 2026/05/02 16:26
+              - generic [ref=e430]:
+                - checkbox [ref=e432] [cursor=pointer]
+                - button "江西铜业 减仓 35 600362.SH 2026/05/02 16:13" [ref=e433]:
+                  - generic [ref=e436]:
+                    - generic [ref=e437]:
+                      - generic [ref=e439]: 江西铜业
+                      - generic [ref=e440]: 减仓 35
+                    - generic [ref=e441]:
+                      - generic [ref=e442]: 600362.SH
+                      - generic [ref=e444]: 2026/05/02 16:13
+              - generic [ref=e446]: 已到底部
+        - generic [ref=e449]:
+          - generic [ref=e450]:
+            - button "重新分析" [ref=e451] [cursor=pointer]:
+              - img [ref=e452]
+              - text: 重新分析
+            - button "追问 AI" [ref=e454] [cursor=pointer]:
+              - img [ref=e455]
+              - text: 追问 AI
+            - button "完整分析报告" [ref=e457] [cursor=pointer]:
+              - img [ref=e458]
+              - text: 完整分析报告
+          - generic [ref=e460]:
+            - generic [ref=e462]:
+              - generic [ref=e463]:
+                - generic [ref=e465]:
+                  - generic [ref=e467]:
+                    - heading "贵州茅台" [level=2] [ref=e469]
+                    - generic [ref=e470]:
+                      - generic [ref=e471]: 600519.SH
+                      - generic [ref=e472]:
+                        - img [ref=e473]
+                        - text: 2026/05/03 15:01
+                  - generic [ref=e475]:
+                    - generic [ref=e476]: 核心洞察
+                    - paragraph [ref=e477]: "[降级结果] Price is in a clear bearish alignment (MA5<MA10<MA20) with expanding MACD bars and price below all major moving averages. Volume is light (turnover 0.42%) and chip distribution shows only ~8% of holders profitable, sugg…"
+                - generic [ref=e478]:
+                  - generic [ref=e480] [cursor=pointer]:
+                    - img [ref=e482]
+                    - generic [ref=e484]:
+                      - heading "操作建议" [level=4] [ref=e485]
+                      - paragraph [ref=e486]: 减仓
+                  - generic [ref=e488] [cursor=pointer]:
+                    - img [ref=e490]
+                    - generic [ref=e492]:
+                      - heading "趋势预测" [level=4] [ref=e493]
+                      - paragraph [ref=e494]: 技术面bearish，趋势评分 30
+                - generic [ref=e495]:
+                  - generic [ref=e496]:
+                    - generic [ref=e497]: 板块联动
+                    - heading "关联板块" [level=3] [ref=e498]
+                  - generic [ref=e499]:
+                    - generic [ref=e501]: 食品饮料
+                    - generic [ref=e503]: 白酒Ⅲ
+                    - generic [ref=e505]: 白酒Ⅱ
+              - generic [ref=e508]:
+                - heading "市场情绪" [level=3] [ref=e509]
+                - generic [ref=e510]:
+                  - generic [ref=e511]: 恐惧贪婪指数
+                  - generic [ref=e512]:
+                    - img [ref=e513]
+                    - generic [ref=e517]:
+                      - generic [ref=e518]: "32"
+                      - generic [ref=e519]: 悲观
+            - generic [ref=e520]:
+              - generic [ref=e522]:
+                - generic [ref=e523]: 策略点位
+                - heading "狙击点位" [level=3] [ref=e524]
+              - generic [ref=e525]:
+                - generic [ref=e527]:
+                  - generic [ref=e528]: 理想买入
+                  - generic [ref=e529]: "1380.0"
+                - generic [ref=e532]:
+                  - generic [ref=e533]: 二次买入
+                  - generic [ref=e534]: —
+                - generic [ref=e537]:
+                  - generic [ref=e538]: 止损价位
+                  - generic [ref=e539]: "1375.0"
+                - generic [ref=e542]:
+                  - generic [ref=e543]: 止盈目标
+                  - generic [ref=e544]: "1411.13"
+            - generic [ref=e546]:
+              - generic [ref=e547]:
+                - generic [ref=e548]:
+                  - generic [ref=e549]: 资讯动态
+                  - heading "相关资讯" [level=3] [ref=e550]
+                - button "刷新" [ref=e553]
+              - generic [ref=e554]:
+                - img [ref=e556]
+                - generic [ref=e558]:
+                  - paragraph [ref=e559]: 暂无相关资讯
+                  - paragraph [ref=e560]: 可稍后刷新以获取最新资讯。
+            - generic [ref=e561]:
+              - generic [ref=e563]:
+                - generic [ref=e564]: 透明度
+                - heading "数据追溯" [level=3] [ref=e565]
+              - generic [ref=e566]:
+                - generic [ref=e567]: "记录 ID:"
+                - code [ref=e568]: "3"
+              - generic [ref=e569]:
+                - button "原始分析结果" [ref=e571]:
+                  - generic [ref=e572]: 原始分析结果
+                  - img [ref=e573]
+                - button "分析快照" [ref=e576]:
+                  - generic [ref=e577]: 分析快照
+                  - img [ref=e578]
+            - paragraph [ref=e580]: "分析模型: openai/deepseek-v4-flash"

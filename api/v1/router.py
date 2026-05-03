@@ -11,10 +11,15 @@ API v1 路由聚合
 
 from fastapi import APIRouter
 
-from api.v1.endpoints import analysis, auth, history, stocks, backtest, system_config, agent, usage, portfolio
+from api.v1.endpoints import analysis, auth, chart, health, history, stocks, backtest, system_config, agent, usage, portfolio, realtime
 
 # 创建 v1 版本主路由
 router = APIRouter(prefix="/api/v1")
+
+router.include_router(
+    health.router,
+    tags=["Health"]
+)
 
 router.include_router(
     auth.router,
@@ -26,6 +31,12 @@ router.include_router(
     agent.router,
     prefix="/agent",
     tags=["Agent"]
+)
+
+router.include_router(
+    chart.router,
+    prefix="/chart",
+    tags=["Chart"]
 )
 
 router.include_router(
@@ -68,4 +79,10 @@ router.include_router(
     portfolio.router,
     prefix="/portfolio",
     tags=["Portfolio"]
+)
+
+router.include_router(
+    realtime.router,
+    prefix="/data",
+    tags=["Realtime"]
 )

@@ -1,0 +1,26 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "📊 DeepSeekQuant" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e8]: 📊
+        - text: DeepSeekQuant
+      - navigation [ref=e9]:
+        - link "Explorer" [ref=e10] [cursor=pointer]:
+          - /url: /explorer
+        - link "Providers" [ref=e11] [cursor=pointer]:
+          - /url: /providers
+      - generic [ref=e14]: 系统运行中
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e18]:
+        - heading "选择市场" [level=2] [ref=e20]
+        - generic [ref=e21]: 🌐
+      - generic [ref=e22]: 加载市场中...
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]: 市场主要指数/股票
+            - button "+ 添加" [ref=e27] [cursor=pointer]
+          - generic [ref=e29]: 暂无数据
+        - generic [ref=e30]: 请选择股票/指数查看详情

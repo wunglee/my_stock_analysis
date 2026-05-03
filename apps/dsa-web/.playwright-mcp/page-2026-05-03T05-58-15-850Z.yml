@@ -1,0 +1,60 @@
+- generic [ref=e4]:
+  - complementary "桌面侧边导航" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img [ref=e9]
+        - paragraph [ref=e11]: DSA
+      - navigation "主导航" [ref=e12]:
+        - link "首页" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e14]
+          - generic [ref=e17]: 首页
+        - link "问股" [ref=e18] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e19]
+          - generic [ref=e23]: 问股
+        - link "持仓" [ref=e24] [cursor=pointer]:
+          - /url: /portfolio
+          - img [ref=e25]
+          - generic [ref=e29]: 持仓
+        - link "回测" [ref=e30] [cursor=pointer]:
+          - /url: /backtest
+          - img [ref=e32]
+          - generic [ref=e34]: 回测
+        - link "设置" [ref=e35] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e36]
+          - generic [ref=e39]: 设置
+      - button "切换主题" [ref=e42]:
+        - img [ref=e43]
+        - generic [ref=e45]: 主题
+  - main [ref=e46]:
+    - generic [ref=e47]:
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - button "AI 回测" [ref=e50]
+          - button "纯技术回测" [ref=e51]
+        - generic [ref=e52]:
+          - textbox "按股票代码筛选（留空为全部）" [ref=e54]
+          - button "筛选" [ref=e55] [cursor=pointer]
+          - generic [ref=e56]:
+            - generic [ref=e57]: 窗口
+            - spinbutton [ref=e58]
+          - generic [ref=e59]:
+            - generic [ref=e60]: 从
+            - textbox "分析日期从" [ref=e61]
+          - generic [ref=e62]:
+            - generic [ref=e63]: 到
+            - textbox "分析日期到" [ref=e64]
+          - button "次日验证" [ref=e65] [cursor=pointer]: 次日验证
+          - button "强制重跑" [ref=e67] [cursor=pointer]: 强制重跑
+          - button "运行回测" [ref=e69] [cursor=pointer]
+        - paragraph [ref=e70]: 使用窗口 = 1 来对比 AI 预测与下一交易日收盘价。
+      - main [ref=e71]:
+        - generic [ref=e73]:
+          - heading "暂无指标" [level=3] [ref=e74]
+          - paragraph [ref=e75]: 运行回测以生成组合级绩效指标。
+        - generic [ref=e77]:
+          - img [ref=e79]
+          - heading "暂无结果" [level=3] [ref=e81]
+          - paragraph [ref=e82]: 运行回测以评估历史分析准确度

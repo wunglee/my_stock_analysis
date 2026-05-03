@@ -1,0 +1,38 @@
+- generic [ref=e4]:
+  - complementary "桌面侧边导航" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img [ref=e9]
+        - paragraph [ref=e11]: DSA
+      - navigation "主导航" [ref=e12]:
+        - link "首页" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e14]
+          - generic [ref=e17]: 首页
+        - link "问股" [ref=e18] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e19]
+          - generic [ref=e23]: 问股
+        - link "持仓" [ref=e24] [cursor=pointer]:
+          - /url: /portfolio
+          - img [ref=e25]
+          - generic [ref=e29]: 持仓
+        - link "回测" [ref=e30] [cursor=pointer]:
+          - /url: /backtest
+          - img [ref=e31]
+          - generic [ref=e33]: 回测
+        - link "设置" [ref=e34] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e35]
+          - generic [ref=e38]: 设置
+      - button "切换主题" [ref=e41]:
+        - img [ref=e42]
+        - generic [ref=e44]: 主题
+  - main [ref=e45]:
+    - generic [ref=e46]:
+      - generic [ref=e47]: "404"
+      - heading "页面未找到" [level=1] [ref=e48]
+      - paragraph [ref=e49]: 抱歉，您访问的页面不存在或已被移动
+      - button "返回首页" [ref=e50] [cursor=pointer]:
+        - img [ref=e51]
+        - text: 返回首页

@@ -2891,3 +2891,34 @@ textarea {
     text-align: left;
   }
 }
+
+/* =========================================
+   K-line Chart Segmented Controls
+   ========================================= */
+.segmented-control {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.btn-segment {
+  padding: 4px 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  background: hsl(var(--card));
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.btn-segment:hover {
+  background: hsl(var(--hover));
+}
+
+.btn-segment.active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}

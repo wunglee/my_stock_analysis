@@ -1,0 +1,56 @@
+- generic [ref=e4]:
+  - complementary "桌面侧边导航" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img [ref=e9]
+        - paragraph [ref=e11]: DSA
+      - navigation "主导航" [ref=e12]:
+        - link "首页" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e14]
+          - generic [ref=e17]: 首页
+        - link "问股" [ref=e18] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e19]
+          - generic [ref=e23]: 问股
+        - link "持仓" [ref=e24] [cursor=pointer]:
+          - /url: /portfolio
+          - img [ref=e25]
+          - generic [ref=e29]: 持仓
+        - link "回测" [ref=e30] [cursor=pointer]:
+          - /url: /backtest
+          - img [ref=e32]
+          - generic [ref=e34]: 回测
+        - link "设置" [ref=e35] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e36]
+          - generic [ref=e39]: 设置
+      - button "切换主题" [ref=e42]:
+        - img [ref=e43]
+        - generic [ref=e45]: 主题
+  - main [ref=e46]:
+    - generic [ref=e47]:
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - button "AI 回测" [ref=e50]
+          - button "纯技术回测" [active] [ref=e51]
+        - generic [ref=e52]:
+          - textbox "输入股票代码，逗号分隔（如：600519,000858）" [ref=e160]
+          - generic [ref=e161]:
+            - generic [ref=e162]: 从
+            - textbox "开始日期" [ref=e163]
+          - generic [ref=e56]:
+            - generic [ref=e57]: 到
+            - textbox "结束日期" [ref=e164]
+          - generic [ref=e59]:
+            - generic [ref=e60]: 窗口
+            - spinbutton [ref=e165]: "10"
+          - button "运行纯技术回测" [ref=e166] [cursor=pointer]
+      - main [ref=e71]:
+        - generic [ref=e167]:
+          - heading "暂无数据" [level=3] [ref=e168]
+          - paragraph [ref=e169]: 运行纯技术回测以查看结果。
+        - generic [ref=e170]:
+          - img [ref=e172]
+          - heading "等待运行" [level=3] [ref=e174]
+          - paragraph [ref=e175]: 输入股票代码和日期范围，点击运行纯技术回测。

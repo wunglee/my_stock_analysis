@@ -1,0 +1,6 @@
+- generic [ref=e3]:
+  - alert [ref=e5]:
+    - generic [ref=e7]:
+      - paragraph [ref=e8]: 请求失败
+      - paragraph [ref=e9]: 端点不存在
+  - button "重试" [ref=e10] [cursor=pointer]
