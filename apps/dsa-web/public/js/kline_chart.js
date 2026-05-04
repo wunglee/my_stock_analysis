@@ -30,7 +30,8 @@
             period: 'daily',
             indicator: 'VOL',
             chipVisible: false,
-            chipDate: ''
+            chipDate: '',
+            chipWidth: 180
         },
 
         // 运行时状态
@@ -159,7 +160,10 @@
                         <button class="btn btn-segment" data-indicator="KDJ">KDJ</button>
                         <button class="btn btn-segment" data-indicator="OBV">OBV</button>
                     </div>
-                    <div id="mainChart" style="flex:1; min-height:0;"></div>
+                    <div style="flex:1; min-height:0; position:relative;">
+                        <div id="mainChart" style="position:absolute; inset:0;"></div>
+                        <div id="chipResizeHandle" style="display:none; position:absolute; top:6%; bottom:58%; width:6px; cursor:col-resize; z-index:10; background:rgba(100,100,100,0.15); border-radius:3px; transition:background 0.2s;"></div>
+                    </div>
                 </div>
             `
 
@@ -232,6 +236,45 @@
                     b.classList.toggle('active', b.dataset.indicator === State.ui.indicator)
                 })
             }
+        },
+
+        initResizeHandle() {
+            const handle = document.getElementById('chipResizeHandle')
+            if (!handle) return
+            let startX = 0
+            let startWidth = State.ui.chipWidth
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault()
+                startX = e.clientX
+                startWidth = State.ui.chipWidth
+                handle.style.background = 'rgba(100,100,100,0.4)'
+                document.addEventListener('mousemove', onMove)
+                document.addEventListener('mouseup', onUp)
+            })
+            const onMove = (e) => {
+                const dx = startX - e.clientX
+                let newWidth = startWidth + dx
+                newWidth = Math.max(80, Math.min(400, newWidth))
+                State.ui.chipWidth = newWidth
+                Lifecycle.render()
+            }
+            const onUp = () => {
+                handle.style.background = 'rgba(100,100,100,0.15)'
+                document.removeEventListener('mousemove', onMove)
+                document.removeEventListener('mouseup', onUp)
+            }
+        },
+
+        updateResizeHandle() {
+            const handle = document.getElementById('chipResizeHandle')
+            if (!handle) return
+            if (!State.ui.chipVisible) {
+                handle.style.display = 'none'
+                return
+            }
+            handle.style.display = 'block'
+            const chipWidth = State.ui.chipWidth
+            handle.style.right = (chipWidth + 10 - 3) + 'px'
         }
     }
 
@@ -248,7 +291,7 @@
             const ohlc = displayData.map(d => [d.open, d.close, d.low, d.high])
             const zoom = State.runtime.zoom || { start: 75, end: 100 }
             const chipVisible = State.ui.chipVisible
-            const chipWidth = 180
+            const chipWidth = State.ui.chipWidth
             const mainRight = chipVisible ? chipWidth + 20 : 40
 
             // ===== Grid 配置 =====
@@ -781,11 +824,16 @@
                 ? profitLossRatio.toFixed(2)
                 : '—'
 
+            const chartDom = document.getElementById('mainChart')
+            const chartWidth = chartDom ? chartDom.clientWidth : 1200
+            const chipWidth = State.ui.chipWidth
+            const chipPanelLeft = chartWidth - 10 - chipWidth
+
             return [
                 {
                     type: 'group',
-                    right: 50,
-                    top: 8,
+                    left: chipPanelLeft + 10,
+                    top: 65,
                     children: [{
                         type: 'text',
                         style: {
@@ -798,7 +846,7 @@
                 },
                 {
                     type: 'group',
-                    right: 10,
+                    left: chipPanelLeft + 10,
                     top: '55%',
                     children: [
                         {
@@ -1376,6 +1424,7 @@
                 // 恢复 DOM 按钮状态（clear 不影响 DOM，但为保险起见）
                 Layout.updateSelectors()
             }
+            Layout.updateResizeHandle()
         },
 
         /**
@@ -1498,6 +1547,7 @@
 
             this.clear()
             Layout.build()
+            Layout.initResizeHandle()
             DataService.loadInitial()
         },
 
@@ -1524,6 +1574,8 @@
                     }, { notMerge: false, lazyUpdate: true })
                 }
             })
+
+            Layout.updateResizeHandle()
         },
 
         /**
