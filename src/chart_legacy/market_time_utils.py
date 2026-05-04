@@ -1,6 +1,6 @@
 """市场时间工具 - 简化版
 
-从 temp/markets/src/core/share/market/market_time_utils.py 改编
+从 market_chart/markets/src/core/share/market/market_time_utils.py 改编
 只保留 chart_data_assembler 需要的方法，移除深层依赖。
 """
 

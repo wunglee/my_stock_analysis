@@ -1,6 +1,6 @@
 """技术指标业务层封装
 
-从 temp/markets/src/core/signal/indicator_service.py 整包移植
+从 market_chart/markets/src/core/signal/indicator_service.py 整包移植
 仅调整导入路径，保持原始逻辑不变。
 """
 

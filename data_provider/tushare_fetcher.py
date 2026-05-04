@@ -531,30 +531,35 @@ class TushareFetcher(BaseFetcher):
         column_mapping = {
             'trade_date': 'date',
             'vol': 'volume',
+            'turnover_ratio': 'turnover_rate',
             # open, high, low, close, amount, pct_chg 列名相同
         }
-        
+
         df = df.rename(columns=column_mapping)
-        
+
         # 转换日期格式（YYYYMMDD -> YYYY-MM-DD）
         if 'date' in df.columns:
             df['date'] = pd.to_datetime(df['date'], format='%Y%m%d')
-        
+
         # 成交量 / 成交额：仅 A 股类接口做单位换算（港股 hk_daily 不换算）
         if 'volume' in df.columns and not is_hk:
             df['volume'] = df['volume'] * 100
-        
+
         if 'amount' in df.columns and not is_hk:
             df['amount'] = df['amount'] * 1000
-        
+
         # 添加股票代码列
         df['code'] = stock_code
-        
+
+        # 确保 turnover_rate 列存在（Tushare Pro 接口可能提供）
+        if 'turnover_rate' not in df.columns:
+            df['turnover_rate'] = None
+
         # 只保留需要的列
         keep_cols = ['code'] + STANDARD_COLUMNS
         existing_cols = [col for col in keep_cols if col in df.columns]
         df = df[existing_cols]
-        
+
         return df
 
     def get_stock_name(self, stock_code: str) -> Optional[str]:

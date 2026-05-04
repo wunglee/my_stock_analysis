@@ -690,6 +690,10 @@ class LongbridgeFetcher(BaseFetcher):
         if "pct_chg" not in df.columns and "close" in df.columns:
             df["pct_chg"] = df["close"].pct_change() * 100
 
+        # Longbridge 历史 K 线不直接提供换手率，此处留空
+        if "turnover_rate" not in df.columns:
+            df["turnover_rate"] = None
+
         for col in STANDARD_COLUMNS:
             if col not in df.columns:
                 df[col] = None

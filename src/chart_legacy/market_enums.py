@@ -1,6 +1,6 @@
 """市场枚举定义
 
-从 temp/markets/src/core/share/market/market_enums.py 整包移植
+从 market_chart/markets/src/core/share/market/market_enums.py 整包移植
 保持原始逻辑不变。
 """
 

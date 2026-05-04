@@ -1,6 +1,6 @@
 """时序数据统计计算 - 基础设施层
 
-从 temp/markets/src/infrastructure/timeseries_calculator.py 整包移植
+从 market_chart/markets/src/infrastructure/timeseries_calculator.py 整包移植
 保持原始逻辑不变。
 """
 

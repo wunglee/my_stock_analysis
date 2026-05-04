@@ -1,6 +1,6 @@
 """市场数据类型定义
 
-从 temp/markets/src/core/share/market/data_types.py 整包移植
+从 market_chart/markets/src/core/share/market/data_types.py 整包移植
 适配当前项目，移除深层依赖。
 """
 
@@ -20,6 +20,7 @@ class OHLCVRecord:
     low: float
     close: float
     volume: float
+    turnover_rate: Optional[float] = None
 
 
 @dataclass
@@ -44,7 +45,7 @@ class PriceData:
 
     def to_dataframe(self) -> pd.DataFrame:
         if not self.records:
-            return pd.DataFrame(columns=['date', 'open', 'high', 'low', 'close', 'volume'])
+            return pd.DataFrame(columns=['date', 'open', 'high', 'low', 'close', 'volume', 'turnover_rate'])
         data = []
         for record in self.records:
             data.append({
@@ -54,6 +55,7 @@ class PriceData:
                 'low': record.low,
                 'close': record.close,
                 'volume': record.volume,
+                'turnover_rate': record.turnover_rate,
             })
         return pd.DataFrame(data)
 
@@ -71,6 +73,7 @@ class PriceData:
                 low=float(row['low']),
                 close=float(row['close']),
                 volume=float(row['volume']),
+                turnover_rate=float(row['turnover_rate']) if 'turnover_rate' in df.columns and pd.notna(row.get('turnover_rate')) else None,
             )
             records.append(record)
         now = pd.Timestamp.now()

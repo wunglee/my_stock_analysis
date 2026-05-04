@@ -69,7 +69,7 @@ def _markdown_to_image_m2f(markdown_text: str) -> Optional[bytes]:
             try:
                 shutil.rmtree(temp_dir)
             except OSError as e:
-                logger.debug("Failed to remove temp dir %s: %s", temp_dir, e)
+                logger.debug("Failed to remove market_chart dir %s: %s", temp_dir, e)
 
 
 def _markdown_to_image_wkhtml(markdown_text: str) -> Optional[bytes]:

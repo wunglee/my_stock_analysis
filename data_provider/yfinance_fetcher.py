@@ -254,6 +254,10 @@ class YfinanceFetcher(BaseFetcher):
         # 添加股票代码列
         df['code'] = stock_code
 
+        # Yahoo Finance 不直接提供历史换手率
+        if 'turnover_rate' not in df.columns:
+            df['turnover_rate'] = None
+
         # 只保留需要的列
         keep_cols = ['code'] + STANDARD_COLUMNS
         existing_cols = [col for col in keep_cols if col in df.columns]

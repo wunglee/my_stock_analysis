@@ -24,3 +24,6 @@ test-results
 *.njsproj
 *.sln
 *.sw?
+/.playwright-mcp/
+/.claude/
+/.playwright-mcp/

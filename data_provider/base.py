@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 # === 标准化列名定义 ===
-STANDARD_COLUMNS = ['date', 'open', 'high', 'low', 'close', 'volume', 'amount', 'pct_chg']
+STANDARD_COLUMNS = ['date', 'open', 'high', 'low', 'close', 'volume', 'amount', 'pct_chg', 'turnover_rate']
 
 
 def unwrap_exception(exc: Exception) -> Exception:
@@ -412,7 +412,7 @@ class BaseFetcher(ABC):
             df['date'] = pd.to_datetime(df['date'])
         
         # 数值列类型转换
-        numeric_cols = ['open', 'high', 'low', 'close', 'volume', 'amount', 'pct_chg']
+        numeric_cols = ['open', 'high', 'low', 'close', 'volume', 'amount', 'pct_chg', 'turnover_rate']
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')

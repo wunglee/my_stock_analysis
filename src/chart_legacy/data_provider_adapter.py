@@ -46,14 +46,14 @@ class DataFetcherAdapter:
         """获取指数/个股价格数据
 
         委托给 DataFetcherManager.get_daily_data()，然后将 DataFrame
-        转换为 PriceData。
+        转换为 PriceData。支持日线/周线/月线聚合。
 
         Args:
             symbol: 股票代码（如 '600519', 'AAPL', 'HK00700'）
             start_date: 开始日期
             end_date: 结束日期
             market_local_time: 市场本地时间（当前未使用，保留接口兼容）
-            period: 周期（daily/weekly/monthly，当前仅支持 daily）
+            period: 周期（daily/weekly/monthly）
 
         Returns:
             PriceData: 标准化的价格数据对象
@@ -63,9 +63,9 @@ class DataFetcherAdapter:
             start_str = start_date.strftime('%Y-%m-%d') if isinstance(start_date, pd.Timestamp) else str(start_date)
             end_str = end_date.strftime('%Y-%m-%d') if isinstance(end_date, pd.Timestamp) else str(end_date)
 
-            logger.info(f"[Adapter] 获取数据: {symbol}, {start_str} ~ {end_str}")
+            logger.info(f"[Adapter] 获取数据: {symbol}, period={period}, {start_str} ~ {end_str}")
 
-            # 委托给 DataFetcherManager
+            # 委托给 DataFetcherManager（始终获取日线数据，然后在本地聚合）
             df, source_name = self._manager.get_daily_data(
                 stock_code=symbol,
                 start_date=start_str,
@@ -84,7 +84,13 @@ class DataFetcherAdapter:
 
             # DataFrame -> PriceData
             price_data = PriceData.from_dataframe(df, symbol=symbol)
-            logger.info(f"[Adapter] {symbol} 获取成功: {price_data.count} 条 (来源: {source_name})")
+
+            # 周线/月线聚合（从原始组件系统迁移 _convert_period）
+            if period in ('weekly', 'monthly'):
+                market_code = MarketCode.parse(_infer_market_from_symbol(symbol))
+                price_data = self._convert_period(price_data, period, market_code)
+
+            logger.info(f"[Adapter] {symbol} 获取成功: {price_data.count} 条 (来源: {source_name}, 周期: {period})")
             return price_data
 
         except Exception as e:
@@ -97,6 +103,154 @@ class DataFetcherAdapter:
                 end_date=end_date,
                 count=0,
             )
+
+    def _filter_non_trading_periods(self, df: pd.DataFrame, period: str, market_code: MarketCode) -> pd.DataFrame:
+        """过滤非交易周期
+
+        从原始组件系统 base_provider.py 迁移。
+        智能过滤空周期：只过滤"非交易周/月"（整周/月都是节假日），
+        保留"有交易但无数据的周/月"（用于判断上市周）。
+
+        使用当前项目的 trading_calendar.is_market_open 替代原始系统的
+        TradingCalendarService。
+        """
+        from src.core.trading_calendar import is_market_open
+
+        original_count = len(df)
+        rows_to_keep = []
+        rows_filtered = []
+
+        for idx, row in df.iterrows():
+            is_empty = pd.isna(row['open']) and pd.isna(row['high']) and pd.isna(row['low']) and pd.isna(row['close'])
+
+            if is_empty:
+                date = pd.Timestamp(row['date'])
+
+                if period == 'weekly':
+                    week_start = date - pd.Timedelta(days=date.weekday())
+                    week_end = week_start + pd.Timedelta(days=6)
+                    period_start, period_end = week_start, week_end
+                    period_name = '非交易周'
+                elif period == 'monthly':
+                    month_start = date.replace(day=1)
+                    if date.month == 12:
+                        month_end = pd.Timestamp(date.year + 1, 1, 1) - pd.Timedelta(days=1)
+                    else:
+                        month_end = pd.Timestamp(date.year, date.month + 1, 1) - pd.Timedelta(days=1)
+                    period_start, period_end = month_start, month_end
+                    period_name = '非交易月'
+                else:
+                    rows_to_keep.append(idx)
+                    continue
+
+                # 检查这个周期是否有任何交易日
+                market_str = market_code.value.lower() if market_code != MarketCode.UNKNOWN else 'cn'
+                has_trading_day = False
+                current_date = period_start
+                while current_date <= period_end:
+                    if is_market_open(market_str, current_date.date()):
+                        has_trading_day = True
+                        break
+                    current_date += pd.Timedelta(days=1)
+
+                if has_trading_day:
+                    rows_to_keep.append(idx)
+                else:
+                    rows_filtered.append((idx, date, period_name))
+            else:
+                rows_to_keep.append(idx)
+
+        df_filtered = df.loc[rows_to_keep]
+
+        if rows_filtered:
+            logger.info(f"[Adapter] {period}线转换：过滤了 {len(rows_filtered)} 个非交易周期")
+            for idx, date, reason in rows_filtered[:5]:
+                logger.info(f"   - {date.strftime('%Y-%m-%d')}: {reason}")
+            if len(rows_filtered) > 5:
+                logger.info(f"   ... 还有 {len(rows_filtered) - 5} 个")
+            logger.info(f"   原始{period}线数据: {original_count} 条 → 过滤后: {len(df_filtered)} 条")
+
+        return df_filtered
+
+    def _convert_period(self, price_data: PriceData, period: str, market_code: MarketCode) -> PriceData:
+        """周期转换（日线→周线/月线）
+
+        从原始组件系统 base_provider.py 完整移植。
+        内部使用 pandas.resample()，对外仍是强类型 PriceData。
+
+        Args:
+            price_data: 日线数据（PriceData对象）
+            period: 目标周期 ('weekly' 或 'monthly')
+            market_code: 市场代码（用于交易日历判断）
+
+        Returns:
+            转换后的 PriceData 对象
+        """
+        if period == 'daily' or price_data.count == 0:
+            return price_data
+
+        # 临时转换为 DataFrame 进行周期重采样
+        df = price_data.to_dataframe()
+        df['date'] = pd.to_datetime(df['date'])
+        df_copy = df.set_index('date')
+
+        if period == 'weekly':
+            # 使用 'W-MON' 按自然周（周一开始）进行重采样
+            # label='left': 使用周期开始的日期作为标签（周一的日期）
+            # closed='left': 左闭右开，周一属于当周
+            df_copy = df_copy.resample('W-MON', label='left', closed='left').agg({
+                'open': 'first',
+                'high': 'max',
+                'low': 'min',
+                'close': 'last',
+                'volume': 'sum',
+                'turnover_rate': 'sum',
+            })
+            df_copy = df_copy.reset_index()
+            df_copy = self._filter_non_trading_periods(df_copy, period, market_code)
+        elif period == 'monthly':
+            df_copy = df_copy.resample('ME').agg({
+                'open': 'first',
+                'high': 'max',
+                'low': 'min',
+                'close': 'last',
+                'volume': 'sum',
+                'turnover_rate': 'sum',
+            })
+            df_copy = df_copy.reset_index()
+            df_copy = self._filter_non_trading_periods(df_copy, period, market_code)
+        else:
+            logger.warning(f"[Adapter] 不支持的周期类型: {period}，返回原始数据")
+            return price_data
+
+        # 类型安全检查：验证转换结果
+        if 'date' in df_copy.columns:
+            df_copy['date'] = pd.to_datetime(df_copy['date'])
+            if not pd.api.types.is_datetime64_any_dtype(df_copy['date']):
+                raise TypeError(f"_convert_period: date 列转换后类型不正确: {df_copy['date'].dtype}")
+
+        # 转换回 PriceData 强类型
+        records = []
+        for _, row in df_copy.iterrows():
+            records.append(
+                OHLCVRecord(
+                    date=pd.Timestamp(row['date']),
+                    open=float(row['open']),
+                    high=float(row['high']),
+                    low=float(row['low']),
+                    close=float(row['close']),
+                    volume=float(row['volume']),
+                    turnover_rate=float(row['turnover_rate']) if 'turnover_rate' in df_copy.columns and pd.notna(row.get('turnover_rate')) else None,
+                )
+            )
+
+        return PriceData(
+            records=records,
+            symbol=price_data.symbol,
+            start_date=records[0].date if records else price_data.start_date,
+            end_date=records[-1].date if records else price_data.end_date,
+            count=len(records)
+        )
 
     def get_stock_prices(
         self,
@@ -217,6 +371,7 @@ class DataFetcherAdapter:
             'low': quote.low,
             'close': quote.price,
             'volume': quote.volume,
+            'turnover_rate': quote.turnover_rate,
             'trading_phase': trading_phase.value,
             'should_poll': True,
         }

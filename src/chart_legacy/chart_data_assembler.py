@@ -1,6 +1,6 @@
 """图表数据组装模块
 
-从 temp/markets/src/app/chart_data.py 整包移植
+从 market_chart/markets/src/app/chart_data.py 整包移植
 仅调整导入路径，保持原始逻辑不变。
 """
 
@@ -208,6 +208,7 @@ class ChartDataAssembler:
                 'low': self._safe_float(record.low),
                 'close': self._safe_float(record.close),
                 'volume': self._safe_float(record.volume),
+                'turnover_rate': self._safe_float(record.turnover_rate) if record.turnover_rate is not None else None,
                 'ma5': self._safe_float(ma5.iloc[i]),
                 'ma10': self._safe_float(ma10.iloc[i]),
                 'ma20': self._safe_float(ma20.iloc[i]),
@@ -302,9 +303,13 @@ class ChartDataAssembler:
             return []
 
     def _calculate_chip_distribution(self, price_data: PriceData, bins: int = 50) -> Dict[str, Any]:
-        """计算每个日期的累计筹码分布
+        """使用换手率衰减模型计算专业筹码分布 (CYQ)
 
-        对每个日期 i，取 [0, i] 的累计 K 线数据，将每日成交量按价格区间均匀分布到 bins 中。
+        核心逻辑：
+        1. 历史筹码每日按换手率衰减：chips *= (1 - turnover_rate/100)
+        2. 当日新成交量均匀分布到当日价格区间（high-low）
+        3. 交易区间外的筹码只会因衰减而减少，不会增加
+
         返回: {date_str: {bins: [{price, volume, percentage}], minPrice, maxPrice, totalVolume}}
         """
         try:
@@ -312,54 +317,84 @@ class ChartDataAssembler:
             if not records:
                 return {}
 
+            all_time_min = min(r.low for r in records)
+            all_time_max = max(r.high for r in records)
+
+            if all_time_max <= all_time_min:
+                return {}
+
+            price_range = all_time_max - all_time_min
+            bin_size = price_range / bins
+
+            # 检测是否有换手率数据
+            has_turnover = any(
+                getattr(r, 'turnover_rate', 0) is not None and getattr(r, 'turnover_rate', 0) > 0
+                for r in records
+            )
+            if not has_turnover:
+                logger.warning("[筹码分布] 无换手率数据，使用默认衰减率 2%/日")
+
+            # 累计筹码数组（每个 bin 的筹码量）
+            cumulative_volumes = [0.0] * bins
             result = {}
-            # 预分配累积数据
-            for i in range(len(records)):
-                # 取 [0, i] 的累积数据
-                cumulative_records = records[:i + 1]
 
-                # 计算全局价格范围和总成交量
-                global_min = min(r.low for r in cumulative_records)
-                global_max = max(r.high for r in cumulative_records)
-                total_volume = sum(r.volume for r in cumulative_records)
+            for i, r in enumerate(records):
+                # 1. 历史筹码衰减
+                turnover_rate = getattr(r, 'turnover_rate', None)
+                if turnover_rate is not None and turnover_rate > 0:
+                    decay_factor = max(0.0, 1.0 - turnover_rate / 100.0)
+                elif turnover_rate == 0:
+                    # 明确为0（停牌）：不衰减
+                    decay_factor = 1.0
+                else:
+                    # 无换手率数据时使用默认衰减率（约50个交易日完全置换）
+                    decay_factor = 0.98
 
-                if global_max <= global_min or total_volume == 0:
-                    result[self._format_timestamp_safe(records[i].date)] = {
-                        'bins': [],
-                        'minPrice': self._safe_float(global_min),
-                        'maxPrice': self._safe_float(global_max),
-                        'totalVolume': 0,
-                    }
-                    continue
+                # 记录衰减前的状态，用于诊断
+                volumes_before = cumulative_volumes.copy()
 
-                bin_size = (global_max - global_min) / bins
-                volumes = [0.0] * bins
+                for b in range(bins):
+                    cumulative_volumes[b] *= decay_factor
 
-                # 将每日成交量分布到 bins
-                for r in cumulative_records:
-                    day_range = r.high - r.low
-                    if day_range == 0:
-                        idx = min(int((r.close - global_min) / bin_size), bins - 1)
-                        volumes[idx] += r.volume
-                        continue
-
+                # 2. 当日新筹码分布到 high-low 区间
+                day_range = r.high - r.low
+                if day_range == 0:
+                    # 一字板：全部归入 close 所在的 bin
+                    idx = min(int((r.close - all_time_min) / bin_size), bins - 1)
+                    cumulative_volumes[idx] += r.volume
+                else:
                     vol_per_unit = r.volume / day_range
-                    start_idx = max(0, int((r.low - global_min) / bin_size))
-                    end_idx = min(bins - 1, int((r.high - global_min) / bin_size))
+                    start_idx = max(0, int((r.low - all_time_min) / bin_size))
+                    end_idx = min(bins - 1, int((r.high - all_time_min) / bin_size))
 
                     for b in range(start_idx, end_idx + 1):
-                        bin_low = global_min + b * bin_size
-                        bin_high = global_min + (b + 1) * bin_size
+                        bin_low = all_time_min + b * bin_size
+                        bin_high = all_time_min + (b + 1) * bin_size
                         overlap_low = max(r.low, bin_low)
                         overlap_high = min(r.high, bin_high)
-                        overlap = max(0, overlap_high - overlap_low)
-                        volumes[b] += overlap * vol_per_unit
+                        overlap = max(0.0, overlap_high - overlap_low)
+                        cumulative_volumes[b] += overlap * vol_per_unit
 
-                # 构建 bins 结果
+                # 诊断：检查是否有交易区间外的bin筹码增加（这不应该发生）
+                if day_range > 0:
+                    for b in range(bins):
+                        bin_low = all_time_min + b * bin_size
+                        bin_high = all_time_min + (b + 1) * bin_size
+                        # bin与交易区间严格无交集
+                        no_overlap = bin_high <= r.low or bin_low >= r.high
+                        if no_overlap and cumulative_volumes[b] > volumes_before[b]:
+                            logger.error(
+                                f"[筹码BUG] {r.date} bin={b} ({bin_low:.2f}-{bin_high:.2f}) "
+                                f"在交易区间({r.low:.2f}-{r.high:.2f})外却增加了: "
+                                f"{volumes_before[b]:.1f} -> {cumulative_volumes[b]:.1f}"
+                            )
+
+                # 4. 构建结果
+                total_volume = sum(cumulative_volumes)
                 bin_data = []
                 for b in range(bins):
-                    price = global_min + (b + 0.5) * bin_size
-                    vol = volumes[b]
+                    price = all_time_min + (b + 0.5) * bin_size
+                    vol = cumulative_volumes[b]
                     percentage = (vol / total_volume * 100) if total_volume > 0 else 0
                     bin_data.append({
                         'price': self._safe_float(price),
@@ -367,8 +402,8 @@ class ChartDataAssembler:
                         'percentage': self._safe_float(percentage),
                     })
 
-                # 计算筹码统计信息
-                current_close = records[i].close
+                # 筹码统计信息
+                current_close = r.close
                 avg_cost = sum(b['price'] * b['volume'] for b in bin_data) / total_volume if total_volume > 0 else 0
                 profit_volume = sum(b['volume'] for b in bin_data if b['price'] < current_close)
                 loss_volume = sum(b['volume'] for b in bin_data if b['price'] >= current_close)
@@ -376,10 +411,10 @@ class ChartDataAssembler:
                 loss_ratio = (loss_volume / total_volume * 100) if total_volume > 0 else 0
                 profit_loss_ratio = (profit_volume / loss_volume) if loss_volume > 0 else float('inf')
 
-                result[self._format_timestamp_safe(records[i].date)] = {
+                result[self._format_timestamp_safe(r.date)] = {
                     'bins': bin_data,
-                    'minPrice': self._safe_float(global_min),
-                    'maxPrice': self._safe_float(global_max),
+                    'minPrice': self._safe_float(all_time_min),
+                    'maxPrice': self._safe_float(all_time_max),
                     'totalVolume': self._safe_float(total_volume),
                     'avgCost': self._safe_float(avg_cost),
                     'profitVolume': self._safe_float(profit_volume),
