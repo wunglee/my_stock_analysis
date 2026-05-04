@@ -819,7 +819,6 @@
             const lossRatio = chipData.lossRatio || 0
             const profitLossRatio = chipData.profitLossRatio
 
-            const avgCostColor = avgCost <= currentClose ? '#ef4444' : '#10b981'
             const plText = profitLossRatio !== null && profitLossRatio !== undefined
                 ? profitLossRatio.toFixed(2)
                 : '—'
@@ -828,6 +827,19 @@
             const chartWidth = chartDom ? chartDom.clientWidth : 1200
             const chipWidth = State.ui.chipWidth
             const chipPanelLeft = chartWidth - 10 - chipWidth
+
+            const styles = getComputedStyle(document.body)
+            const fg = styles.getPropertyValue('--foreground').trim()
+            const st = styles.getPropertyValue('--secondary-text').trim()
+            const mf = styles.getPropertyValue('--muted-foreground').trim()
+            const destructive = styles.getPropertyValue('--destructive').trim()
+            const success = styles.getPropertyValue('--color-success').trim()
+            const textPrimary = fg ? `hsl(${fg})` : '#334155'
+            const textSecondary = st ? `hsl(${st})` : '#64748b'
+            const textMuted = mf ? `hsl(${mf})` : '#94a3b8'
+            const colorRed = destructive ? `hsl(${destructive})` : '#ef4444'
+            const colorGreen = success ? `hsl(${success})` : '#10b981'
+            const avgCostColor = avgCost <= currentClose ? colorRed : colorGreen
 
             return [
                 {
@@ -838,7 +850,7 @@
                         type: 'text',
                         style: {
                             text: '筹码分布',
-                            fill: '#94a3b8',
+                            fill: textMuted,
                             fontSize: 12,
                             fontWeight: 'bold'
                         }
@@ -854,7 +866,7 @@
                             top: 0,
                             style: {
                                 text: `日期: ${chipDate}`,
-                                fill: '#e2e8f0',
+                                fill: textPrimary,
                                 fontSize: 11,
                                 fontWeight: 'bold'
                             }
@@ -873,7 +885,7 @@
                             top: 36,
                             style: {
                                 text: `获利比例: ${profitRatio.toFixed(1)}%`,
-                                fill: '#ef4444',
+                                fill: colorRed,
                                 fontSize: 11
                             }
                         },
@@ -882,7 +894,7 @@
                             top: 54,
                             style: {
                                 text: `套牢比例: ${lossRatio.toFixed(1)}%`,
-                                fill: '#10b981',
+                                fill: colorGreen,
                                 fontSize: 11
                             }
                         },
@@ -891,7 +903,7 @@
                             top: 72,
                             style: {
                                 text: `盈亏比: ${plText}`,
-                                fill: '#e2e8f0',
+                                fill: textSecondary,
                                 fontSize: 11
                             }
                         }
