@@ -80,3 +80,4 @@ static/
 /apps/dsa-desktop/node_modules/
 /market_chart/
 /market_chart/
+/.playwright-mcp/

@@ -12,6 +12,7 @@ import pandas as pd
 from src.chart_legacy.market_types import PriceData, OHLCVRecord, IntradayData, IntradayTickRecord, OrderBookLevel, TradeDetailRecord, TickRange
 from src.chart_legacy.market_enums import MarketCode, TradingPhase
 from src.chart_legacy.market_time_utils import MarketTimeUtils, _infer_market_from_symbol
+from src.data_provider.bar_aggregator import BarAggregator
 
 logger = logging.getLogger(__name__)
 
@@ -23,16 +24,23 @@ class DataFetcherAdapter:
     内部委托给当前项目的 DataFetcherManager。
     """
 
-    def __init__(self, manager=None):
+    def __init__(self, manager=None, caching_provider=None):
         """初始化适配器
 
         Args:
             manager: DataFetcherManager 实例（可选，默认创建新实例）
+            caching_provider: CachingDataProvider 实例（可选，优先使用缓存层）
         """
-        if manager is None:
+        self._caching_provider = caching_provider
+        if caching_provider is not None:
+            # 缓存层已提供，manager 仅用于实时行情等 fallback
+            self._manager = manager
+        elif manager is None:
             from data_provider.base import DataFetcherManager
             manager = DataFetcherManager()
-        self._manager = manager
+            self._manager = manager
+        else:
+            self._manager = manager
         self._memory_cache: Dict[str, Any] = {}
 
     def get_index_prices(
@@ -59,18 +67,60 @@ class DataFetcherAdapter:
             PriceData: 标准化的价格数据对象
         """
         try:
-            # 格式化日期为字符串
+            # 格式化日期为字符串（用于日志）
             start_str = start_date.strftime('%Y-%m-%d') if isinstance(start_date, pd.Timestamp) else str(start_date)
             end_str = end_date.strftime('%Y-%m-%d') if isinstance(end_date, pd.Timestamp) else str(end_date)
 
             logger.info(f"[Adapter] 获取数据: {symbol}, period={period}, {start_str} ~ {end_str}")
 
-            # 委托给 DataFetcherManager（始终获取日线数据，然后在本地聚合）
-            df, source_name = self._manager.get_daily_data(
-                stock_code=symbol,
-                start_date=start_str,
-                end_date=end_str,
-            )
+            df = None
+            source_name = "unknown"
+
+            if self._caching_provider is not None:
+                # 优先走缓存层（磁盘缓存优先 + 自动补全）
+                # 周线/月线直接走对应缓存方法，利用已聚合的周期缓存
+                if period == 'weekly':
+                    df = self._caching_provider.get_weekly_bars(
+                        symbol=symbol,
+                        start_date=start_date,
+                        end_date=end_date,
+                        use_cache=True,
+                        auto_save=True,
+                    )
+                elif period == 'monthly':
+                    df = self._caching_provider.get_monthly_bars(
+                        symbol=symbol,
+                        start_date=start_date,
+                        end_date=end_date,
+                        use_cache=True,
+                        auto_save=True,
+                    )
+                else:
+                    df = self._caching_provider.get_daily_bars(
+                        symbol=symbol,
+                        start_date=start_date,
+                        end_date=end_date,
+                        use_cache=True,
+                        auto_save=True,
+                    )
+                source_name = "cache"
+            else:
+                # 回退：直接走 DataFetcherManager（仅返回日线，需手动聚合周期）
+                df, source_name = self._manager.get_daily_data(
+                    stock_code=symbol,
+                    start_date=start_str,
+                    end_date=end_str,
+                )
+
+            # 统一列名转换（CachingDataProvider 返回事实标准列名 trade_date，
+            # PriceData.from_dataframe 期望旧列名 date）
+            if df is not None and not df.empty:
+                df = df.copy()
+                if 'trade_date' in df.columns:
+                    df = df.rename(columns={'trade_date': 'date'})
+                # 去掉 symbol 列（PriceData.from_dataframe 不期望）
+                if 'symbol' in df.columns:
+                    df = df.drop(columns=['symbol'])
 
             if df is None or df.empty:
                 logger.warning(f"[Adapter] {symbol} 无数据")
@@ -85,8 +135,8 @@ class DataFetcherAdapter:
             # DataFrame -> PriceData
             price_data = PriceData.from_dataframe(df, symbol=symbol)
 
-            # 周线/月线聚合（从原始组件系统迁移 _convert_period）
-            if period in ('weekly', 'monthly'):
+            # fallback 路径（无 caching_provider）仍需手动聚合周期
+            if self._caching_provider is None and period in ('weekly', 'monthly'):
                 market_code = MarketCode.parse(_infer_market_from_symbol(symbol))
                 price_data = self._convert_period(price_data, period, market_code)
 
@@ -175,8 +225,8 @@ class DataFetcherAdapter:
     def _convert_period(self, price_data: PriceData, period: str, market_code: MarketCode) -> PriceData:
         """周期转换（日线→周线/月线）
 
-        从原始组件系统 base_provider.py 完整移植。
-        内部使用 pandas.resample()，对外仍是强类型 PriceData。
+        复用 BarAggregator 做核心聚合，保留 _filter_non_trading_periods
+        过滤空周期（整周/月都是节假日的场景）。
 
         Args:
             price_data: 日线数据（PriceData对象）
@@ -189,41 +239,30 @@ class DataFetcherAdapter:
         if period == 'daily' or price_data.count == 0:
             return price_data
 
-        # 临时转换为 DataFrame 进行周期重采样
+        # PriceData -> DataFrame，对齐为事实标准列名
         df = price_data.to_dataframe()
-        df['date'] = pd.to_datetime(df['date'])
-        df_copy = df.set_index('date')
+        df = df.rename(columns={'date': 'trade_date'})
+        df['trade_date'] = pd.to_datetime(df['trade_date'])
 
+        # BarAggregator 需要 amount 列；旧数据可能没有，用 0 填充
+        if 'amount' not in df.columns:
+            df['amount'] = 0.0
+
+        # 使用 BarAggregator 做核心聚合
+        aggregator = BarAggregator()
         if period == 'weekly':
-            # 使用 'W-MON' 按自然周（周一开始）进行重采样
-            # label='left': 使用周期开始的日期作为标签（周一的日期）
-            # closed='left': 左闭右开，周一属于当周
-            df_copy = df_copy.resample('W-MON', label='left', closed='left').agg({
-                'open': 'first',
-                'high': 'max',
-                'low': 'min',
-                'close': 'last',
-                'volume': 'sum',
-                'turnover_rate': 'sum',
-            })
-            df_copy = df_copy.reset_index()
-            df_copy = self._filter_non_trading_periods(df_copy, period, market_code)
+            df_copy = aggregator.daily_to_weekly(df)
         elif period == 'monthly':
-            df_copy = df_copy.resample('ME').agg({
-                'open': 'first',
-                'high': 'max',
-                'low': 'min',
-                'close': 'last',
-                'volume': 'sum',
-                'turnover_rate': 'sum',
-            })
-            df_copy = df_copy.reset_index()
-            df_copy = self._filter_non_trading_periods(df_copy, period, market_code)
+            df_copy = aggregator.daily_to_monthly(df)
         else:
             logger.warning(f"[Adapter] 不支持的周期类型: {period}，返回原始数据")
             return price_data
 
-        # 类型安全检查：验证转换结果
+        # 保留旧代码的空周期过滤（整周/月都是节假日的场景）
+        df_copy = df_copy.rename(columns={'trade_date': 'date'})
+        df_copy = self._filter_non_trading_periods(df_copy, period, market_code)
+
+        # 类型安全检查
         if 'date' in df_copy.columns:
             df_copy['date'] = pd.to_datetime(df_copy['date'])
             if not pd.api.types.is_datetime64_any_dtype(df_copy['date']):

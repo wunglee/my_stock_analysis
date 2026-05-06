@@ -8,6 +8,8 @@ import logging
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 
+import pandas as pd
+
 from sqlalchemy import and_, select
 
 from src.config import get_config
@@ -15,6 +17,11 @@ from src.core.backtest_engine import OVERALL_SENTINEL_CODE, BacktestEngine, Eval
 from src.repositories.backtest_repo import BacktestRepository
 from src.repositories.stock_repo import StockRepository
 from src.storage import BacktestResult, BacktestSummary, DatabaseManager
+from src.data_provider.bar_repository import SqliteBarRepository
+from src.data_provider.trading_calendar_adapter import XCalTradingCalendar
+from src.data_provider.external_data_source import FetcherManagerDataSource
+from src.data_provider.caching_provider import CachingDataProvider
+from data_provider.base import DataFetcherManager
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +35,16 @@ class BacktestService:
         self.db = db_manager or DatabaseManager.get_instance()
         self.repo = BacktestRepository(self.db)
         self.stock_repo = StockRepository(self.db)
+
+        # 初始化缓存优先数据提供层
+        calendar = XCalTradingCalendar(market="cn")
+        bar_repo = SqliteBarRepository(db_manager=self.db, calendar=calendar)
+        ext_source = FetcherManagerDataSource(DataFetcherManager())
+        self.caching_provider = CachingDataProvider(
+            repository=bar_repo,
+            external_source=ext_source,
+            calendar=calendar,
+        )
 
     def run_backtest(
         self,
@@ -346,20 +363,18 @@ class BacktestService:
 
     def _try_fill_daily_data(self, *, code: str, analysis_date: date, eval_window_days: int) -> None:
         try:
-            from data_provider.base import DataFetcherManager
-
             # fetch a window that covers start + forward bars
             end_date = analysis_date + timedelta(days=max(eval_window_days * 2, 30))
-            manager = DataFetcherManager()
-            df, source = manager.get_daily_data(
-                stock_code=code,
-                start_date=analysis_date.strftime("%Y-%m-%d"),
-                end_date=end_date.strftime("%Y-%m-%d"),
-                days=eval_window_days * 2,
+            df = self.caching_provider.get_daily_bars(
+                symbol=code,
+                start_date=pd.Timestamp(analysis_date),
+                end_date=pd.Timestamp(end_date),
+                use_cache=True,
+                auto_save=True,
             )
             if df is None or df.empty:
                 return
-            self.db.save_daily_data(df, code=code, data_source=source)
+            # CachingDataProvider 已自动保存到缓存，无需手动 save_daily_data
         except Exception as exc:
             logger.warning(f"补全日线数据失败({code}): {exc}")
 

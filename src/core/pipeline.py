@@ -25,6 +25,10 @@ import pandas as pd
 from src.config import get_config, Config
 from src.storage import get_db
 from data_provider import DataFetcherManager
+from src.data_provider.bar_repository import SqliteBarRepository
+from src.data_provider.trading_calendar_adapter import XCalTradingCalendar
+from src.data_provider.external_data_source import FetcherManagerDataSource
+from src.data_provider.caching_provider import CachingDataProvider
 from data_provider.base import normalize_stock_code
 from data_provider.realtime_types import ChipDistribution
 from src.analyzer import GeminiAnalyzer, AnalysisResult, fill_chip_structure_if_needed, fill_price_position_if_needed
@@ -96,6 +100,16 @@ class StockAnalysisPipeline:
         # 初始化各模块
         self.db = get_db()
         self.fetcher_manager = DataFetcherManager()
+
+        # 初始化新的缓存优先数据提供层
+        calendar = XCalTradingCalendar(market="cn")
+        bar_repo = SqliteBarRepository(db_manager=self.db, calendar=calendar)
+        ext_source = FetcherManagerDataSource(self.fetcher_manager)
+        self.caching_provider = CachingDataProvider(
+            repository=bar_repo,
+            external_source=ext_source,
+            calendar=calendar,
+        )
         # 不再单独创建 akshare_fetcher，统一使用 fetcher_manager 获取增强数据
         self.trend_analyzer = StockTrendAnalyzer()  # 技术分析器
         self.analyzer = GeminiAnalyzer(config=self.config)
@@ -177,54 +191,59 @@ class StockAnalysisPipeline:
             )
 
     def fetch_and_save_stock_data(
-        self, 
+        self,
         code: str,
         force_refresh: bool = False,
         current_time: Optional[datetime] = None,
     ) -> Tuple[bool, Optional[str]]:
         """
-        获取并保存单只股票数据
-        
-        断点续传逻辑：
-        1. 检查数据库是否已有最新可复用交易日数据
-        2. 如果有且不强制刷新，则跳过网络请求
-        3. 否则从数据源获取并保存
-        
+        获取并保存单只股票数据（缓存优先）
+
+        使用 CachingDataProvider 实现磁盘缓存优先：
+        1. 先查本地数据库缓存
+        2. 数据完整则直接返回（断点续传自然生效）
+        3. 有缺失则请求外部数据源补全并自动保存
+
         Args:
             code: 股票代码
             force_refresh: 是否强制刷新（忽略本地缓存）
             current_time: 本轮运行冻结的参考时间，用于统一断点续传目标交易日判断
-            
+
         Returns:
             Tuple[是否成功, 错误信息]
         """
         stock_name = code
         try:
-            # 首先获取股票名称
             stock_name = self.fetcher_manager.get_stock_name(code, allow_realtime=False)
 
             target_date = self._resolve_resume_target_date(
                 code, current_time=current_time
             )
 
-            # 断点续传检查：如果最新可复用交易日的数据已存在，则跳过
-            if not force_refresh and self.db.has_today_data(code, target_date):
-                logger.info(
-                    f"{stock_name}({code}) {target_date} 数据已存在，跳过获取（断点续传）"
-                )
-                return True, None
+            # 计算数据获取区间：目标日期前45天到目标日期
+            # 给技术分析留足历史数据（MA20、量比等需要前20日）
+            end_date = pd.Timestamp(target_date)
+            start_date = end_date - pd.Timedelta(days=45)
 
-            # 从数据源获取数据
-            logger.info(f"{stock_name}({code}) 开始从数据源获取数据...")
-            df, source_name = self.fetcher_manager.get_daily_data(code, days=30)
+            logger.info(
+                f"{stock_name}({code}) 开始获取数据 ({start_date.date()} ~ {end_date.date()})..."
+            )
+
+            df = self.caching_provider.get_daily_bars(
+                symbol=code,
+                start_date=start_date,
+                end_date=end_date,
+                use_cache=True,
+                force_refresh=force_refresh,
+                auto_save=True,
+            )
 
             if df is None or df.empty:
                 return False, "获取数据为空"
 
-            # 保存到数据库
-            saved_count = self.db.save_daily_data(df, code, source_name)
-            logger.info(f"{stock_name}({code}) 数据保存成功（来源: {source_name}，新增 {saved_count} 条）")
-
+            logger.info(
+                f"{stock_name}({code}) 数据准备完成，共 {len(df)} 条"
+            )
             return True, None
 
         except Exception as e:
