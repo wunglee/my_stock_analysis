@@ -30,6 +30,8 @@ export interface StockAutocompleteProps {
   placeholder?: string;
   /** Additional CSS class name */
   className?: string;
+  /** Override the search query extracted from value (e.g., last token of multi-stock input) */
+  searchQuery?: string;
 }
 
 function FallbackInput({
@@ -98,6 +100,7 @@ function StockAutocompleteInner({
   disabled = false,
   placeholder = '输入股票代码或名称',
   className,
+  searchQuery,
 }: StockAutocompleteProps) {
   const { index, loading, fallback } = useStockIndex();
   const {
@@ -141,12 +144,14 @@ function StockAutocompleteInner({
   };
 
   // Sync external value with internal query (only when value truly changes)
+  // Uses searchQuery (if provided) to extract the actual search term from multi-stock input
   useEffect(() => {
-    if (prevValueRef.current !== value) {
-      setQuery(value);
-      prevValueRef.current = value;
+    const effectiveQuery = searchQuery ?? value;
+    if (prevValueRef.current !== effectiveQuery) {
+      setQuery(effectiveQuery);
+      prevValueRef.current = effectiveQuery;
     }
-  }, [value, setQuery]);
+  }, [value, searchQuery, setQuery]);
 
   // Calculate suggestion box position (using fixed positioning)
   useEffect(() => {

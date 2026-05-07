@@ -95,3 +95,76 @@ class PerformanceMetrics(BaseModel):
 
     advice_breakdown: Dict[str, Any] = Field(default_factory=dict)
     diagnostics: Dict[str, Any] = Field(default_factory=dict)
+
+
+# ============ 纯技术回测 Schema ============
+
+class TechnicalBacktestRequest(BaseModel):
+    codes: List[str] = Field(..., min_length=1, max_length=10, description="股票代码列表")
+    start_date: str = Field(..., description="开始日期 YYYY-MM-DD")
+    end_date: str = Field(..., description="结束日期 YYYY-MM-DD")
+    eval_window_days: int = Field(10, ge=1, le=120, description="评估窗口天数")
+
+
+class KlineDataItem(BaseModel):
+    date: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+
+
+class TechnicalRuleItem(BaseModel):
+    name: str
+    condition: str
+    sample_count: int
+    win_rate: float
+    avg_return_5d: float
+    confidence: float
+
+
+class TechnicalSignalItem(BaseModel):
+    date: str
+    action: str
+    entry_price: Optional[float] = None
+    stop_loss: Optional[float] = None
+    take_profit: Optional[float] = None
+    reasons: List[str] = Field(default_factory=list)
+    confidence: float
+
+
+class TechnicalEvaluationItem(BaseModel):
+    signal_date: str
+    action: str
+    outcome: str
+    stock_return_pct: float
+    hit_take_profit: bool
+    hit_stop_loss: bool
+    direction_correct: bool
+
+
+class TechnicalStockResult(BaseModel):
+    code: str
+    stock_name: str
+    date_range: str
+    total_signals: int
+    win_rate: float
+    avg_return: float
+    max_drawdown: float
+    kline_data: List[KlineDataItem] = Field(default_factory=list)
+    rules: List[TechnicalRuleItem] = Field(default_factory=list)
+    signals: List[TechnicalSignalItem] = Field(default_factory=list)
+    evaluations: List[TechnicalEvaluationItem] = Field(default_factory=list)
+
+
+class TechnicalCorrelationItem(BaseModel):
+    code_a: str
+    code_b: str
+    price_correlation: float
+
+
+class TechnicalBacktestResponse(BaseModel):
+    meta: Dict[str, Any]
+    per_stock: Dict[str, TechnicalStockResult]
+    cross_stock: Dict[str, List[TechnicalCorrelationItem]]

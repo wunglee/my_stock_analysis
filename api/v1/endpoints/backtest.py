@@ -16,9 +16,12 @@ from api.v1.schemas.backtest import (
     BacktestResultItem,
     BacktestResultsResponse,
     PerformanceMetrics,
+    TechnicalBacktestRequest,
+    TechnicalBacktestResponse,
 )
 from api.v1.schemas.common import ErrorResponse
 from src.services.backtest_service import BacktestService
+from src.services.technical_backtest_service import TechnicalBacktestService
 from src.storage import DatabaseManager
 
 logger = logging.getLogger(__name__)
@@ -211,4 +214,40 @@ def get_stock_performance(
         raise HTTPException(
             status_code=500,
             detail={"error": "internal_error", "message": f"查询单股表现失败: {str(exc)}"},
+        )
+
+
+@router.post(
+    "/technical",
+    response_model=TechnicalBacktestResponse,
+    responses={
+        200: {"description": "纯技术回测完成"},
+        400: {"description": "参数错误", "model": ErrorResponse},
+        500: {"description": "服务器错误", "model": ErrorResponse},
+    },
+    summary="纯技术回测",
+    description="基于真实K线数据计算技术指标并生成交易信号，不依赖AI分析结果",
+)
+def run_technical_backtest(
+    request: TechnicalBacktestRequest,
+) -> TechnicalBacktestResponse:
+    try:
+        service = TechnicalBacktestService()
+        result = service.run_backtest(
+            codes=request.codes,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            eval_window_days=request.eval_window_days,
+        )
+        return TechnicalBacktestResponse(**result)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "invalid_params", "message": str(exc)},
+        )
+    except Exception as exc:
+        logger.error(f"纯技术回测失败: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "internal_error", "message": f"纯技术回测失败: {str(exc)}"},
         )

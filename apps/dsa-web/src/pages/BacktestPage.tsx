@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Check, Minus, X } from 'lucide-react';
 import { StockAutocomplete } from '../components/StockAutocomplete';
 import { backtestApi } from '../api/backtest';
@@ -11,7 +11,7 @@ import type {
   BacktestRunResponse,
   PerformanceMetrics,
 } from '../types/backtest';
-import type { TechnicalBacktestResult, TechnicalBacktestStockResult, KlineData } from '../types/technicalBacktest';
+import type { TechnicalBacktestResult, TechnicalBacktestStockResult } from '../types/technicalBacktest';
 
 const BACKTEST_COMPACT_INPUT_CLASS =
   'input-surface input-focus-glow h-10 rounded-xl border bg-transparent px-3 py-2 text-xs transition-all focus:outline-none disabled:cursor-not-allowed disabled:opacity-60';
@@ -98,116 +98,6 @@ function boolIcon(value?: boolean | null) {
       <Minus className="h-3.5 w-3.5" />
     </span>
   );
-}
-
-// ============ Mock Kline Data Generator ============
-
-function generateMockKlineData(
-  startDate: string,
-  endDate: string,
-  basePrice: number,
-  volatility: number,
-): KlineData[] {
-  const data: KlineData[] = []
-  const start = new Date(startDate)
-  const end = new Date(endDate)
-  let currentPrice = basePrice
-
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const day = d.getDay()
-    if (day === 0 || day === 6) continue // skip weekends
-
-    const dateStr = d.toISOString().split('T')[0]
-    const change = (Math.random() - 0.48) * volatility
-    const open = currentPrice * (1 + (Math.random() - 0.5) * 0.005)
-    const close = currentPrice * (1 + change)
-    const high = Math.max(open, close) * (1 + Math.random() * 0.008)
-    const low = Math.min(open, close) * (1 - Math.random() * 0.008)
-    const volume = Math.floor(50000 + Math.random() * 150000)
-
-    data.push({
-      date: dateStr,
-      open: Math.round(open * 100) / 100,
-      close: Math.round(close * 100) / 100,
-      high: Math.round(high * 100) / 100,
-      low: Math.round(low * 100) / 100,
-      volume,
-    })
-
-    currentPrice = close
-  }
-
-  return data
-}
-
-// ============ Mock Data Generator ============
-
-function generateMockTechnicalResult(): TechnicalBacktestResult {
-  return {
-    meta: {
-      mode: 'technical',
-      codes: ['600519', '000858'],
-      dateRange: ['2024-01-01', '2024-06-01'],
-      evalWindowDays: 10,
-      generatedAt: new Date().toISOString(),
-    },
-    perStock: {
-      '600519': {
-        code: '600519',
-        stockName: '贵州茅台',
-        dateRange: '2024-01-01 ~ 2024-06-01',
-        totalSignals: 45,
-        winRate: 0.58,
-        avgReturn: 2.3,
-        maxDrawdown: -5.2,
-        klineData: generateMockKlineData('2024-01-01', '2024-06-01', 1700, 0.025),
-        rules: [
-          { name: 'MA20支撑', condition: '价格触及MA20±0.5%', sampleCount: 23, winRate: 0.65, avgReturn5d: 2.3, confidence: 0.78 },
-          { name: '缩量回调', condition: '量比<0.8且价格回踩MA5', sampleCount: 18, winRate: 0.72, avgReturn5d: 3.1, confidence: 0.82 },
-          { name: '放量突破', condition: '量比>2且价格突破前高', sampleCount: 15, winRate: 0.60, avgReturn5d: 1.8, confidence: 0.65 },
-        ],
-        signals: [
-          { date: '2024-03-15', action: 'buy', entryPrice: 1680, stopLoss: 1620, takeProfit: 1780, reasons: ['多头排列', '缩量回调'], confidence: 0.82 },
-          { date: '2024-03-28', action: 'buy', entryPrice: 1705, stopLoss: 1650, takeProfit: 1800, reasons: ['MA20支撑', '缩量回调'], confidence: 0.75 },
-          { date: '2024-04-02', action: 'sell', entryPrice: null, stopLoss: null, takeProfit: null, reasons: ['跌破MA20', '放量下跌'], confidence: 0.75 },
-          { date: '2024-04-18', action: 'wait', entryPrice: null, stopLoss: null, takeProfit: null, reasons: ['均线缠绕', '量能萎缩'], confidence: 0.60 },
-        ],
-        evaluations: [
-          { signalDate: '2024-03-15', action: 'buy', outcome: 'win', stockReturnPct: 3.5, hitTakeProfit: true, hitStopLoss: false, directionCorrect: true },
-          { signalDate: '2024-03-28', action: 'buy', outcome: 'win', stockReturnPct: 2.8, hitTakeProfit: false, hitStopLoss: false, directionCorrect: true },
-          { signalDate: '2024-04-02', action: 'sell', outcome: 'loss', stockReturnPct: -1.2, hitTakeProfit: false, hitStopLoss: true, directionCorrect: false },
-          { signalDate: '2024-04-18', action: 'wait', outcome: 'neutral', stockReturnPct: 0.5, hitTakeProfit: false, hitStopLoss: false, directionCorrect: true },
-        ],
-      },
-      '000858': {
-        code: '000858',
-        stockName: '五粮液',
-        dateRange: '2024-01-01 ~ 2024-06-01',
-        totalSignals: 38,
-        winRate: 0.55,
-        avgReturn: 1.9,
-        maxDrawdown: -4.8,
-        klineData: generateMockKlineData('2024-01-01', '2024-06-01', 145, 0.03),
-        rules: [
-          { name: '金叉买入', condition: 'MA5上穿MA10', sampleCount: 20, winRate: 0.70, avgReturn5d: 2.8, confidence: 0.80 },
-          { name: 'RSI超卖反弹', condition: 'RSI<30后反弹', sampleCount: 12, winRate: 0.58, avgReturn5d: 2.0, confidence: 0.60 },
-        ],
-        signals: [
-          { date: '2024-02-20', action: 'buy', entryPrice: 142, stopLoss: 137, takeProfit: 152, reasons: ['金叉买入', '多头排列'], confidence: 0.78 },
-          { date: '2024-03-10', action: 'sell', entryPrice: null, stopLoss: null, takeProfit: null, reasons: ['死叉卖出', '放量跌破'], confidence: 0.72 },
-        ],
-        evaluations: [
-          { signalDate: '2024-02-20', action: 'buy', outcome: 'win', stockReturnPct: 4.2, hitTakeProfit: true, hitStopLoss: false, directionCorrect: true },
-          { signalDate: '2024-03-10', action: 'sell', outcome: 'win', stockReturnPct: -2.5, hitTakeProfit: false, hitStopLoss: false, directionCorrect: true },
-        ],
-      },
-    },
-    crossStock: {
-      correlations: [
-        { codeA: '600519', codeB: '000858', priceCorrelation: 0.72 },
-      ],
-    },
-  };
 }
 
 // ============ Technical Result Detail ============
@@ -443,12 +333,24 @@ const BacktestPage: React.FC = () => {
 
   // Technical backtest state
   const [isTechnicalMode, setIsTechnicalMode] = useState(false);
+  const [isTechnicalRunning, setIsTechnicalRunning] = useState(false);
+  const [technicalError, setTechnicalError] = useState<ParsedApiError | null>(null);
   const [technicalResult, setTechnicalResult] = useState<TechnicalBacktestResult | null>(null);
   const [expandedStockCode, setExpandedStockCode] = useState<string | null>(null);
   const [technicalCodes, setTechnicalCodes] = useState('');
   const [technicalStartDate, setTechnicalStartDate] = useState('');
   const [technicalEndDate, setTechnicalEndDate] = useState('');
   const [technicalEvalDays, setTechnicalEvalDays] = useState('10');
+
+  // 从多代码输入中提取最后一个 token 作为搜索关键词
+  // 如果最后一个 token 已经是完整代码（带市场后缀），则不触发搜索
+  const technicalSearchQuery = useMemo(() => {
+    const tokens = technicalCodes.split(/[,，\s]+/).filter(Boolean);
+    if (tokens.length <= 1) return technicalCodes;
+    const last = tokens[tokens.length - 1];
+    if (/^\d{5,6}\.[A-Z]{2}$/i.test(last)) return '';
+    return last;
+  }, [technicalCodes]);
 
   // Fetch results
   const fetchResults = useCallback(async (
@@ -556,10 +458,32 @@ const BacktestPage: React.FC = () => {
     }
   };
 
-  // Run technical backtest (mock)
-  const handleRunTechnical = () => {
-    setTechnicalResult(generateMockTechnicalResult());
+  // Run technical backtest (real API)
+  const handleRunTechnical = async () => {
+    const codes = technicalCodes
+      .split(/[,，\s]+/)
+      .map((c) => c.trim())
+      .filter(Boolean);
+    if (codes.length === 0) return;
+    if (!technicalStartDate || !technicalEndDate) return;
+
+    setIsTechnicalRunning(true);
+    setTechnicalResult(null);
+    setTechnicalError(null);
     setExpandedStockCode(null);
+    try {
+      const result = await backtestApi.runTechnical({
+        codes,
+        startDate: technicalStartDate,
+        endDate: technicalEndDate,
+        evalWindowDays: parseInt(technicalEvalDays, 10) || 10,
+      });
+      setTechnicalResult(result);
+    } catch (err) {
+      setTechnicalError(getParsedApiError(err));
+    } finally {
+      setIsTechnicalRunning(false);
+    }
   };
 
   // Filter by code
@@ -623,15 +547,33 @@ const BacktestPage: React.FC = () => {
         </div>
 
         {isTechnicalMode ? (
-          /* Technical Mode Controls */
+          <>
+          {/* Technical Mode Controls */}
           <div className="flex max-w-5xl flex-wrap items-center gap-2">
             <div className="relative min-w-0 flex-[1_1_220px]">
-              <input
-                type="text"
+              <StockAutocomplete
                 value={technicalCodes}
-                onChange={(e) => setTechnicalCodes(e.target.value)}
+                onChange={setTechnicalCodes}
+                searchQuery={technicalSearchQuery}
+                onSubmit={(code, _name, source) => {
+                  if (source === 'autocomplete') {
+                    const tokens = technicalCodes
+                      .split(/[,，\s]+/)
+                      .map((c) => c.trim())
+                      .filter(Boolean);
+                    // 去掉最后一个 token（用户正在搜索的部分输入），替换为选中代码
+                    const existing = tokens.slice(0, -1);
+                    if (!existing.includes(code)) {
+                      setTechnicalCodes(
+                        existing.length > 0 ? `${existing.join(', ')}, ${code}` : code,
+                      );
+                    } else {
+                      setTechnicalCodes(existing.join(', '));
+                    }
+                  }
+                }}
                 placeholder="输入股票代码，逗号分隔（如：600519,000858）"
-                className={`${BACKTEST_COMPACT_INPUT_CLASS} w-full`}
+                disabled={isTechnicalRunning}
               />
             </div>
             <div className="flex items-center gap-2 whitespace-nowrap">
@@ -669,11 +611,26 @@ const BacktestPage: React.FC = () => {
             <button
               type="button"
               onClick={handleRunTechnical}
+              disabled={isTechnicalRunning}
               className="btn-primary flex items-center gap-1.5 whitespace-nowrap"
             >
-              运行纯技术回测
+              {isTechnicalRunning ? (
+                <>
+                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  分析中...
+                </>
+              ) : (
+                '运行纯技术回测'
+              )}
             </button>
           </div>
+          {technicalError && (
+            <ApiErrorAlert error={technicalError} className="mt-2 max-w-4xl" />
+          )}
+          </>
         ) : (
           /* AI Mode Controls */
           <div className="flex max-w-5xl flex-wrap items-center gap-2">

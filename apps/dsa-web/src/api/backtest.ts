@@ -7,6 +7,7 @@ import type {
   BacktestResultItem,
   PerformanceMetrics,
 } from '../types/backtest';
+import type { TechnicalBacktestResult } from '../types/technicalBacktest';
 
 // ============ API ============
 
@@ -114,5 +115,26 @@ export const backtestApi = {
       }
       throw err;
     }
+  },
+
+  /**
+   * Run pure technical backtest (no AI)
+   */
+  runTechnical: async (params: {
+    codes: string[];
+    startDate?: string;
+    endDate?: string;
+    evalWindowDays?: number;
+  }): Promise<TechnicalBacktestResult> => {
+    const response = await apiClient.post<Record<string, unknown>>(
+      '/api/v1/backtest/technical',
+      {
+        codes: params.codes,
+        start_date: params.startDate || '',
+        end_date: params.endDate || '',
+        eval_window_days: params.evalWindowDays ?? 10,
+      },
+    );
+    return toCamelCase<TechnicalBacktestResult>(response.data);
   },
 };
