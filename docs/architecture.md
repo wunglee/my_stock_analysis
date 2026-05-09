@@ -1,7 +1,7 @@
 # DSA 项目架构分析
 
 > 本文档描述 DSA（Daily Stock Analysis）股票智能分析系统的整体架构、模块关系和数据流。
-> 更新时间：2026-05-02
+> 更新时间：2026-05-08
 
 ---
 
@@ -78,65 +78,75 @@ daily_stock_analysis/
 
 ## 3. 数据流全景
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          数据流全景图                                    │
-└─────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph DataSources["外部数据源"]
+        Efinance["Efinance\n东方财富"]
+        AkShare["AkShare\n多源聚合"]
+        Tushare["Tushare Pro"]
+        YFinance["Yahoo Finance"]
+        Longbridge["Longbridge\nOpenAPI"]
+    end
 
-  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-  │Efinance(东方)│  │   AkShare    │  │  Tushare Pro │  │   Yahoo Fin. │
-  │  A股首选    │  │  多源聚合    │  │  高质量API   │  │  美股兜底    │
-  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
-         │                 │                 │                 │
-  ┌──────┴─────────────────┴─────────────────┴─────────────────┴──────┐
-  │                    DataFetcherManager                              │
-  │         策略模式 + 按优先级自动故障切换 + 熔断器保护                 │
-  │  美股: YFinance → Longbridge                                       │
-  │  港股: Longbridge → AkShare                                        │
-  │  A股: Efinance → AkShare → Tushare → Pytdx → Baostock             │
-  └──────┬───────────────────────────────────────────────────────────┘
-         │
-         ▼
-  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-  │ UnifiedRealtime  │  │  历史K线(ORM)    │  │ ChipDistribution │
-  │   统一实时行情    │  │  StockDaily      │  │    筹码分布      │
-  └──────┬───────────┘  └──────┬───────────┘  └──────┬───────────┘
-         │                     │                     │
-         └─────────────────────┼─────────────────────┘
-                               ▼
-              ┌─────────────────────────────┐
-              │    StockAnalysisPipeline    │
-              │      (src/core/pipeline)    │
-              │  - 断点续传检查              │
-              │  - 数据获取与保存            │
-              │  - 趋势分析（本地计算）       │
-              │  - 情报搜索（多搜索引擎）     │
-              │  - LLM 分析 / Agent 流水线   │
-              └────────────┬────────────────┘
-                           │
-            ┌──────────────┼──────────────┐
-            ▼              ▼              ▼
-     ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-     │  传统分析路径 │ │ Agent分析路径│ │  回测评估路径 │
-     │ Gemini/Claude│ │ 多智能体编排 │ │ BacktestEngine│
-     │ 直接 LLM 调用│ │ Orchestrator │ │              │
-     └──────┬───────┘ └──────┬───────┘ └──────┬───────┘
-            │                │                │
-            ▼                ▼                ▼
-     ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-     │ AnalysisReport││OrchestratorResult││BacktestResult│
-     │  结构化报告   │ │ 决策仪表盘 JSON│ │   评估结果    │
-     └──────┬───────┘ └──────┬───────┘ └──────┬───────┘
-            │                │                │
-            └────────────────┼────────────────┘
-                             ▼
-              ┌─────────────────────────────┐
-              │    NotificationService      │
-              │    (11 种通知渠道并发推送)   │
-              │  - Markdown → 图片转换       │
-              │  - 企业微信/飞书/Telegram   │
-              │  - Discord/Slack/邮件/推送   │
-              └─────────────────────────────┘
+    subgraph FetcherLayer["数据获取层"]
+        DFM["DataFetcherManager\n策略模式 + 自动故障切换 + 熔断器"]
+    end
+
+    subgraph ProtocolLayer["Protocol-based 数据架构（新增）"]
+        CDS["CachingDataProvider\n缓存优先组装层"]
+        Repo[("SqliteBarRepository\nIBarRepository")]
+        ExtSource["FetcherManagerDataSource\nIExternalDataSource"]
+        Calendar["XCalTradingCalendar\nITradingCalendar"]
+        Aggregator["BarAggregator\nIBarAggregator"]
+    end
+
+    subgraph CorePipeline["核心分析流水线"]
+        Pipeline["StockAnalysisPipeline\n(src/core/pipeline)"]
+    end
+
+    subgraph AnalysisPaths["分析路径"]
+        Traditional["传统分析\nGemini/Claude 直接调用"]
+        Agent["Agent 分析\n多智能体编排"]
+        BacktestV1["AI 回测\nBacktestEngine"]
+        TechBacktest["纯技术回测 v2.0\n(新增)"]
+    end
+
+    subgraph Outputs["输出层"]
+        Report["AnalysisReport\n结构化报告"]
+        Dashboard["OrchestratorResult\n决策仪表盘"]
+        BacktestResult["BacktestResult\n回测评估"]
+        TechResult["TechnicalBacktestResult\n技术回测结果"]
+        Notify["NotificationService\n11 种渠道并发推送"]
+    end
+
+    Efinance --> DFM
+    AkShare --> DFM
+    Tushare --> DFM
+    YFinance --> DFM
+    Longbridge --> DFM
+
+    DFM --> ExtSource
+    ExtSource --> CDS
+    Repo --> CDS
+    Calendar --> CDS
+    Aggregator --> CDS
+
+    CDS --> Pipeline
+    CDS --> TechBacktest
+
+    Pipeline --> Traditional
+    Pipeline --> Agent
+    Pipeline --> BacktestV1
+
+    Traditional --> Report
+    Agent --> Dashboard
+    BacktestV1 --> BacktestResult
+    TechBacktest --> TechResult
+
+    Report --> Notify
+    Dashboard --> Notify
+    BacktestResult --> Notify
+    TechResult --> Notify
 ```
 
 ---
@@ -159,13 +169,14 @@ src/repositories/
 
 ```
 src/services/
-├── analysis_service.py   # 封装分析逻辑，统一 CLI/Bot/API 入口
-├── backtest_service.py   # 回测编排：批量获取候选 → 引擎评估 → 持久化
-├── portfolio_service.py  # 持仓账户、交易记录、现金流管理
-├── history_service.py    # 历史数据服务
-├── task_service.py       # 任务调度与管理
-├── report_renderer.py    # 报告渲染（Markdown/HTML/图片）
-└── image_stock_extractor.py  # 图片中的股票代码提取（LLM + 正则）
+├── analysis_service.py           # 封装分析逻辑，统一 CLI/Bot/API 入口
+├── backtest_service.py           # AI 回测编排：批量获取候选 → 引擎评估 → 持久化
+├── technical_backtest_service.py # 纯技术回测引擎（v1.0 硬编码规则 + v2.0 可配置策略）
+├── portfolio_service.py          # 持仓账户、交易记录、现金流管理
+├── history_service.py            # 历史数据服务
+├── task_service.py               # 任务调度与管理
+├── report_renderer.py            # 报告渲染（Markdown/HTML/图片）
+└── image_stock_extractor.py      # 图片中的股票代码提取（LLM + 正则）
 ```
 
 ### 4.3 Core 层 — 流程编排
@@ -257,11 +268,229 @@ class UnifiedRealtimeQuote:
     # ... 30+ 个统一字段
 ```
 
+### 5.6 Protocol-based 数据获取架构（新增）
+
+在原有 `DataFetcherManager` 策略模式之上，新增一层基于 `typing.Protocol` 的依赖注入体系，实现数据访问的标准化、可测试化和存储无关化。
+
+#### 5.6.1 核心 Protocol
+
+```python
+# src/data_provider/interfaces.py
+
+@runtime_checkable
+class ITradingCalendar(Protocol):
+    def trading_days_between(self, start, end) -> list[pd.Timestamp]: ...
+    def next_trading_day(self, date) -> pd.Timestamp | None: ...
+
+@runtime_checkable
+class IBarRepository(Protocol):
+    def get_daily_bars(self, symbol, start, end) -> pd.DataFrame | None: ...
+    def save_daily_bars(self, df, symbol) -> int: ...
+    def get_missing_ranges(self, symbol, start, end) -> list[tuple]: ...
+
+@runtime_checkable
+class IExternalDataSource(Protocol):
+    def fetch_daily_bars(self, symbol, start, end) -> pd.DataFrame | None: ...
+
+@runtime_checkable
+class IBarAggregator(Protocol):
+    def daily_to_weekly(self, df) -> pd.DataFrame: ...
+    def daily_to_monthly(self, df) -> pd.DataFrame: ...
+```
+
+#### 5.6.2 实现矩阵
+
+| Protocol | 实现类 | 文件 | 职责 |
+|----------|--------|------|------|
+| `ITradingCalendar` | `XCalTradingCalendar` | `trading_calendar_adapter.py` | 基于 `exchange-calendars` 库，支持 CN/HK/US 三市场，fail-open 策略 |
+| `IBarRepository` | `SqliteBarRepository` | `bar_repository.py` | SQLite + SQLAlchemy ORM，含 Daily/Weekly/Monthly 三表，UPSERT 语义 |
+| `IExternalDataSource` | `FetcherManagerDataSource` | `external_data_source.py` | 适配现有 `DataFetcherManager`，列名标准化（`date` → `trade_date`） |
+| `IBarAggregator` | `BarAggregator` | `bar_aggregator.py` | 日线 → 周线/月线聚合，groupby 策略避免空周期脏数据 |
+
+#### 5.6.3 缓存优先组装层
+
+```python
+# src/data_provider/caching_provider.py
+class CachingDataProvider:
+    """组装 IBarRepository + IExternalDataSource + ITradingCalendar + IBarAggregator"""
+    # 策略：先查磁盘 → 计算缺失区间 → 外部补全 → 自动保存 → 返回完整数据
+```
+
+**标准列名事实标准**：`symbol, trade_date, open, high, low, close, volume, amount, pre_close, change, pct_chg`
+
+#### 5.6.4 架构价值
+
+- **存储无关**：业务逻辑依赖 `IBarRepository` 接口，可无缝切换为 PostgreSQL/MongoDB
+- **可测试**：单元测试可直接注入内存 DataFrame 或 mock 对象
+- **渐进式改造**：`FetcherManagerDataSource` 作为适配器，兼容原有 `DataFetcherManager`，不破坏现有调用链路
+- **类型安全**：`@runtime_checkable` + mypy 静态检查，接口契约显式化
+
+#### 5.6.5 类图
+
+```mermaid
+classDiagram
+    class ITradingCalendar {
+        +trading_days_between(start, end) list
+        +next_trading_day(date) Timestamp
+    }
+    class IBarRepository {
+        +get_daily_bars(symbol, start, end) DataFrame
+        +save_daily_bars(df, symbol) int
+        +get_missing_ranges(symbol, start, end) list
+    }
+    class IExternalDataSource {
+        +fetch_daily_bars(symbol, start, end) DataFrame
+        +source_name str
+    }
+    class IBarAggregator {
+        +daily_to_weekly(df) DataFrame
+        +daily_to_monthly(df) DataFrame
+        +filter_complete_periods(df, period, today) DataFrame
+    }
+    class XCalTradingCalendar {
+        +trading_days_between(start, end) list
+        +next_trading_day(date) Timestamp
+    }
+    class SqliteBarRepository {
+        +get_daily_bars(symbol, start, end) DataFrame
+        +save_daily_bars(df, symbol) int
+        +get_missing_ranges(symbol, start, end) list
+    }
+    class FetcherManagerDataSource {
+        +fetch_daily_bars(symbol, start, end) DataFrame
+        +_normalize(df, symbol) DataFrame
+    }
+    class BarAggregator {
+        +daily_to_weekly(df) DataFrame
+        +daily_to_monthly(df) DataFrame
+    }
+    class CachingDataProvider {
+        -_repository IBarRepository
+        -_external IExternalDataSource
+        -_calendar ITradingCalendar
+        -_aggregator IBarAggregator
+        +get_daily_bars(symbol, start, end) DataFrame
+        +get_weekly_bars(symbol, start, end) DataFrame
+        +get_monthly_bars(symbol, start, end) DataFrame
+    }
+
+    ITradingCalendar <|.. XCalTradingCalendar
+    IBarRepository <|.. SqliteBarRepository
+    IExternalDataSource <|.. FetcherManagerDataSource
+    IBarAggregator <|.. BarAggregator
+    CachingDataProvider --> IBarRepository
+    CachingDataProvider --> IExternalDataSource
+    CachingDataProvider --> ITradingCalendar
+    CachingDataProvider --> IBarAggregator
+```
+
 ---
 
-## 6. LLM 集成架构
+## 6. 纯技术回测引擎
 
-### 6.1 多 Provider 统一调用
+纯技术回测是与 AI 回测并行的独立回测体系，完全基于技术指标和量化规则，不依赖 LLM。前端以「技术回测」Tab 与「AI 回测」Tab 共存于 `/backtest` 页面。
+
+### 6.1 双版本演进
+
+| 维度 | v1.0 | v2.0（当前开发中） |
+|------|------|------------------|
+| 策略定义 | 后端硬编码信号规则（MA20 支撑、量能萎缩、量能突破、金叉死叉、RSI 超卖） | 后端 `STRATEGY_CONFIGS` 配置文件 + 前端参数组编辑器 |
+| 参数配置 | 无 | 最多 6 组参数并行对比 |
+| 权益曲线 | 无 | 含交易费用的权益曲线 + 基准对比 |
+| 信号执行 | 当日收盘生成信号，次日开盘执行 | 同上 |
+| 批量回测 | 无 | `run_batch_backtest`（当前 mock 阶段，基于随机扰动） |
+
+### 6.2 v2.0 策略配置体系
+
+```python
+# src/services/technical_backtest_service.py
+STRATEGY_CONFIGS = {
+    "dual_ma": {
+        "name": "双均线趋势跟踪",
+        "category": "trend",
+        "parameters": [
+            {"key": "fast_period", "name": "快线周期", "type": "number", "default": 5, "min": 2, "max": 30},
+            {"key": "slow_period", "name": "慢线周期", "type": "number", "default": 20, "min": 5, "max": 60},
+        ],
+        "validation_rules": [
+            {"type": "lessThan", "paramA": "fast_period", "paramB": "slow_period", "message": "快线周期必须小于慢线周期"}
+        ]
+    },
+    "macd": {...},
+    "rsi": {...},
+    "bollinger": {...},
+}
+```
+
+### 6.3 权益曲线计算模型
+
+```python
+BUY_FEE_RATE = 0.0003   # 买入佣金 0.03%
+SELL_FEE_RATE = 0.0013  # 卖出佣金 + 印花税 0.13%
+
+# 买入时按可用资金计算可买股数（向下取整）
+shares = int(cash / (buy_price * (1 + BUY_FEE_RATE)))
+total_cost = shares * buy_price * (1 + BUY_FEE_RATE)
+
+# 卖出时扣除卖出费用
+sell_value = shares * sell_price * (1 - SELL_FEE_RATE)
+```
+
+**信号执行语义**：信号在当日收盘时生成，在下一交易日的开盘价执行。这一设计避免了未来函数（look-ahead bias）。
+
+### 6.4 后端组件关系
+
+```mermaid
+classDiagram
+    class TechnicalBacktestService {
+        +STRATEGY_CONFIGS dict
+        +run_backtest(codes, start, end, eval_window) dict
+        +run_batch_backtest(request) list
+        -_calculate_signals(df, strategy_id, params) list
+        -_calculate_equity_curve(df, signals) list
+        -_adjust_signals(signals, params) list
+    }
+    class CachingDataProvider {
+        +get_daily_bars(symbol, start, end) DataFrame
+    }
+    class FastAPIRouter {
+        +POST /technical
+        +POST /technical/batch
+        +GET /strategies
+    }
+    class TechnicalBatchRequest {
+        +codes list[str]
+        +param_groups list
+    }
+    class StrategyConfig {
+        +id str
+        +name str
+        +category str
+        +parameters list
+        +validation_rules list
+    }
+
+    FastAPIRouter --> TechnicalBacktestService : 调用
+    FastAPIRouter --> TechnicalBatchRequest : 校验
+    TechnicalBacktestService --> CachingDataProvider : 获取K线
+    TechnicalBacktestService --> StrategyConfig : 读取配置
+```
+
+### 6.5 API 端点
+
+```
+POST /api/v1/backtest/technical       # v1.0 单股技术回测
+POST /api/v1/backtest/technical/batch # v2.0 批量参数组回测（单股，最多6组）
+GET  /api/v1/backtest/strategies      # 获取策略配置列表
+```
+
+**Schema 约束**：`TechnicalBatchRequest` 使用精确 `Literal` 类型限制参数类型和校验规则类型：`type: Literal["number", "boolean"]`、`validation.type: Literal["lessThan", "greaterThan"]`、`codes` 长度限制 `min_length=1, max_length=1`（当前仅支持单股）。
+
+---
+
+## 7. LLM 集成架构
+
+### 7.1 多 Provider 统一调用
 
 通过 **LiteLLM** 统一调用：
 
@@ -274,11 +503,11 @@ class UnifiedRealtimeQuote:
 | AIHubMix | `AIHUBMIX_KEY` |
 | Ollama（本地） | `OLLAMA_BASE_URL` |
 
-### 6.2 多模型 Fallback 链
+### 7.2 多模型 Fallback 链
 
 主模型失败时自动尝试 fallback 模型链，直到成功或全部失败。
 
-### 6.3 结构化输出
+### 7.3 结构化输出
 
 ```python
 # src/schemas/report_schema.py
@@ -291,9 +520,9 @@ class AnalysisReportSchema(BaseModel):
 
 ---
 
-## 7. 多智能体系统（Agent System）
+## 8. 多智能体系统（Agent System）
 
-### 7.1 智能体类型
+### 8.1 智能体类型
 
 ```
 src/agent/agents/
@@ -305,7 +534,7 @@ src/agent/agents/
 └── portfolio_agent.py   # 持仓分析智能体
 ```
 
-### 7.2 编排器模式
+### 8.2 编排器模式
 
 ```
 src/agent/orchestrator.py  # 多智能体流水线协调器
@@ -320,7 +549,7 @@ src/agent/orchestrator.py  # 多智能体流水线协调器
 | `full` | Technical → Intel → Risk → Decision | ~4 次 |
 | `specialist` | Technical → Intel → Risk → Specialist → Decision | ~5 次 |
 
-### 7.3 通信协议
+### 8.3 通信协议
 
 ```python
 # src/agent/protocols.py
@@ -341,7 +570,7 @@ class AgentOpinion:
     key_levels: Dict[str, float]
 ```
 
-### 7.4 工具系统
+### 8.4 工具系统
 
 ```
 src/agent/tools/
@@ -353,7 +582,7 @@ src/agent/tools/
 └── backtest_tools.py    # 回测工具
 ```
 
-### 7.5 技能系统（YAML 驱动策略）
+### 8.5 技能系统（YAML 驱动策略）
 
 ```
 strategies/
@@ -374,9 +603,9 @@ strategies/
 
 ---
 
-## 8. 通知系统
+## 9. 通知系统
 
-### 8.1 架构
+### 9.1 架构
 
 ```python
 # src/notification.py — 多继承聚合所有发送器
@@ -388,7 +617,7 @@ class NotificationService(
 ):
 ```
 
-### 8.2 支持渠道
+### 9.2 支持渠道
 
 | 渠道 | 配置变量 |
 |------|---------|
@@ -408,9 +637,9 @@ class NotificationService(
 
 ---
 
-## 9. Web 前端架构（apps/dsa-web）
+## 10. Web 前端架构（apps/dsa-web）
 
-### 9.1 技术栈
+### 10.1 技术栈
 
 | 类别 | 技术 | 版本 |
 |------|------|------|
@@ -425,18 +654,18 @@ class NotificationService(
 | 实时通信 | EventSource (SSE) + fetch stream | 原生 API |
 | 测试 | Playwright | ~1.49 |
 
-### 9.2 路由结构
+### 10.2 路由结构
 
 | 路由 | 页面 | 功能 |
 |------|------|------|
 | `/` | `HomePage.tsx` | 股票分析仪表盘、历史记录、报告查看 |
 | `/chat` | `ChatPage.tsx` | AI 多轮对话、技能选择、会话管理 |
 | `/portfolio` | `PortfolioPage.tsx` | 持仓账户管理、交易记录、风险分析 |
-| `/backtest` | `BacktestPage.tsx` | 策略回测、结果筛选、绩效指标 |
+| `/backtest` | `BacktestPage.tsx` | AI 回测 + 纯技术回测（双 Tab 模式） |
 | `/settings` | `SettingsPage.tsx` | 系统配置、LLM 通道、认证设置 |
 | `/login` | `LoginPage.tsx` | 登录/首次设置 |
 
-### 9.3 状态管理
+### 10.3 状态管理
 
 ```
 Zustand Store（高频业务状态）
@@ -448,7 +677,105 @@ React Context（低频认证状态）
 └── AuthContext.tsx      # 认证状态 + 自动初始化 + 路由守卫
 ```
 
-### 9.4 实时通信
+### 10.4 纯技术回测 v2.0 组件体系
+
+`BacktestPage.tsx` 采用**双模式 Tab 切换**设计：`isTechnicalMode=false` 时为 AI 回测，`isTechnicalMode=true` 时为纯技术回测。
+
+#### 组件分层
+
+```
+BacktestPage.tsx（页面编排层）
+├── AI 回测模式（原有）
+│   ├── 代码筛选、日期范围、评估窗口
+│   └── 结果表格 + 分页
+└── 纯技术回测模式（v2.0 新增）
+    ├── 股票自动补全、日期范围、策略选择器
+    ├── ParamGroupEditor（参数组编辑器）
+    │   ├── 最多 6 组参数并行配置
+    │   ├── 参数校验（lessThan/greaterThan 规则）
+    │   ├── 添加/删除/复制/启用/禁用
+    │   └── slider + checkbox 输入控件
+    ├── 执行按钮 → useTechnicalBacktest hook
+    └── ParamGroupResultRow（结果对比行）× N
+        ├── MiniKline（ECharts 缩略 K 线 + 买卖信号标记）
+        ├── 统计概览（胜率/最大回撤/平均持仓/超额收益）
+        ├── EquityCurveChart（ECharts 权益曲线，策略 vs 基准）
+        └── 近期交易明细迷你表格
+```
+
+#### 自定义 Hook: `useTechnicalBacktest`
+
+提取所有 v2.0 状态与逻辑，职责单一：
+
+```typescript
+function useTechnicalBacktest() {
+  // 策略列表 + 当前选中策略
+  const [strategies, setStrategies] = useState<StrategyConfig[]>([]);
+  const [selectedStrategyId, setSelectedStrategyId] = useState<string>('');
+
+  // 参数组管理（最多 6 组）
+  const [paramGroups, setParamGroups] = useState<ParamGroup[]>([...]);
+  const [invalidGroupIds, setInvalidGroupIds] = useState<Set<string>>(new Set());
+
+  // 批量回测执行状态
+  const [batchResults, setBatchResults] = useState<ParamGroupResult[]>([]);
+  const [isBatchRunning, setIsBatchRunning] = useState(false);
+
+  // 单股校验（当前仅支持单股回测）
+  const handleRunBatch = async () => { ... };
+}
+```
+
+#### 类型系统: `technicalBacktest.ts`
+
+完整的 v2.0 类型分层：
+
+```typescript
+// 策略配置层
+interface StrategyConfig { id, name, category, parameters[], validationRules[] }
+interface StrategyParameter { key, name, type: 'number' | 'boolean', defaultValue, min?, max?, step? }
+
+// 参数组层
+interface ParamGroup { id, name, enabled, params: Record<string, number | boolean> }
+
+// 回测结果层
+interface ParamGroupResult {
+  group: ParamGroup;
+  stockResult: TechnicalBacktestStockResult;
+  equityCurve: EquityCurvePoint[];
+  trades: TradeRecord[];
+}
+
+// 可视化层
+interface EquityCurvePoint { date, strategyValue, benchmarkValue }
+interface TradeRecord { id, entryDate, entryPrice, exitDate, exitPrice, returnPct, pnlAmount, holdDays }
+```
+
+#### 前端组件关系图
+
+```mermaid
+graph TD
+    BP[BacktestPage.tsx] --> |isTechnicalMode=false| AI["AI 回测模式"]
+    BP --> |isTechnicalMode=true| Tech["纯技术回测模式"]
+
+    Tech --> StockInput["股票输入 + 日期选择 + 策略选择器"]
+    Tech --> PGE["ParamGroupEditor\n参数组编辑器"]
+    Tech --> UTB["useTechnicalBacktest\n自定义 Hook"]
+    Tech --> PGRR["ParamGroupResultRow\n结果对比行"]
+
+    PGE --> ParamInput["ParamInput\nslider / checkbox"]
+    PGE --> validateGroup["validateGroup\n参数校验"]
+
+    PGRR --> MK["MiniKline\nECharts 缩略 K 线"]
+    PGRR --> Stats["统计概览卡片\n胜率 / 回撤 / 持仓 / 超额"]
+    PGRR --> ECC["EquityCurveChart\n权益曲线"]
+    PGRR --> Trades["交易明细表格"]
+
+    UTB --> API["backtest.ts API\n/runTechnicalBatch"]
+    API --> Backend["FastAPI\n/technical/batch"]
+```
+
+### 10.5 实时通信
 
 | 机制 | 场景 | 实现 |
 |------|------|------|
@@ -456,7 +783,7 @@ React Context（低频认证状态）
 | fetch stream | AI 对话流式输出 | 原生 `fetch` + `ReadableStream` + `AbortController` |
 | 轮询 | 历史记录刷新 | `setInterval(30000ms)` + `visibilitychange` 事件 |
 
-### 9.5 认证流程
+### 10.6 认证流程
 
 1. `AuthContext` 挂载时自动请求 `GET /api/v1/auth/status`
 2. `setupState === 'no_password'` → 首次设置密码
@@ -466,9 +793,9 @@ React Context（低频认证状态）
 
 ---
 
-## 10. 桌面端架构（apps/dsa-desktop）
+## 11. 桌面端架构（apps/dsa-desktop）
 
-### 10.1 核心定位
+### 11.1 核心定位
 
 Electron 包装器 + 打包 Python 后端，不是"纯前端包装"：
 
@@ -488,7 +815,7 @@ spawn Python 后端（PyInstaller 可执行文件 / python main.py）
 Web UI 由 FastAPI 的 static 文件处理器服务
 ```
 
-### 10.2 桌面专属能力
+### 11.2 桌面专属能力
 
 | 能力 | 实现 |
 |------|------|
@@ -498,7 +825,7 @@ Web UI 由 FastAPI 的 static 文件处理器服务
 | 本地数据 | `.env` + `data/stock_analysis.db` + `logs/` 都在可执行文件旁 |
 | 主题感知 | `nativeTheme` 适配暗色/亮色 |
 
-### 10.3 与 Web 版对比
+### 11.3 与 Web 版对比
 
 | 维度 | Web | Desktop |
 |------|-----|---------|
@@ -510,9 +837,9 @@ Web UI 由 FastAPI 的 static 文件处理器服务
 
 ---
 
-## 11. CI/CD 与部署
+## 12. CI/CD 与部署
 
-### 11.1 CI 流水线
+### 12.1 CI 流水线
 
 | Job | 触发条件 | 说明 | 阻断 |
 |-----|---------|------|------|
@@ -521,7 +848,7 @@ Web UI 由 FastAPI 的 static 文件处理器服务
 | `docker-build` | 所有 PR | Docker 构建 + 关键模块导入 smoke | 是 |
 | `web-gate` | Web 改动时 | `npm run lint && npm run build` | 是 |
 
-### 11.2 发布流程
+### 12.2 发布流程
 
 ```
 commit message 含 #patch/#minor/#major
@@ -535,14 +862,14 @@ docker-publish.yml → 推送多架构镜像（linux/amd64, linux/arm64）
 desktop-release.yml → Windows .exe + macOS .dmg
 ```
 
-### 11.3 每日定时任务
+### 12.3 每日定时任务
 
 - **调度**：工作日 UTC 10:00（北京时间 18:00）
 - **随机延迟**：0-60 秒（防并发冲突）
 - **超时**：30 分钟
 - **产物**：`reports/` + `logs/` 作为 artifact 保留 30 天
 
-### 11.4 Docker 部署
+### 12.4 Docker 部署
 
 ```yaml
 # docker/docker-compose.yml
@@ -558,28 +885,31 @@ services:
 
 ---
 
-## 12. 关键设计模式
+## 13. 关键设计模式
 
 | 模式 | 应用位置 | 价值 |
 |------|---------|------|
 | **Repository Pattern** | `src/repositories/` | 数据访问抽象，便于测试和切换存储 |
 | **Strategy Pattern** | `data_provider/` | 多数据源 + 自动故障切换 |
+| **Protocol / Duck Typing** | `src/data_provider/interfaces.py` | 存储无关的依赖注入，渐进式改造 |
 | **Circuit Breaker** | `data_provider/realtime_types.py` | 防止连续失败时反复请求，自动恢复 |
 | **Multi-Agent Orchestration** | `src/agent/orchestrator.py` | 专业智能体流水线，支持 4 种模式 |
 | **YAML-Driven Skills** | `strategies/` | 用户可自定义策略，无需编写代码 |
 | **Fail-Open** | `data_provider/fundamental_adapter.py` | 基本面数据允许部分返回，不拖垮整体 |
 | **Layered Architecture** | `src/` 三层 | Repository → Service → Core，职责清晰 |
 | **MVC/MVVM（前端）** | `apps/dsa-web/` | Pages → Components → Hooks → Stores 分层 |
+| **Compound Components** | `ParamGroupEditor` | 父组件管状态，子组件通过 Props 消费，避免 Prop Drilling |
 
 ---
 
-## 13. 技术债务与注意事项
+## 14. 技术债务与注意事项
 
-1. **前端 `index.css` 过大**：约 2900 行 CSS，建议拆分为按功能域的 CSS 模块
-2. **桌面端 `main.js` 过长**：约 1040 行，可考虑按功能拆分为模块
-3. **`pipeline.py` 过长**：1775 行，是核心调度器但已接近维护边界
-4. **单测覆盖率**：测试文件数量多但需关注覆盖率是否达到目标
-5. **Bundle 体积**：Vite 构建产物 JS 约 1.2MB（gzip 后 394KB），可考虑代码分割优化
+1. **`run_batch_backtest` 为 mock 阶段**：当前基于 `_adjust_signals` 随机扰动生成模拟结果，尚未接入真实策略执行引擎
+2. **前端 `index.css` 过大**：约 2900 行 CSS，建议拆分为按功能域的 CSS 模块
+3. **桌面端 `main.js` 过长**：约 1040 行，可考虑按功能拆分为模块
+4. **`pipeline.py` 过长**：1775 行，是核心调度器但已接近维护边界
+5. **单测覆盖率**：测试文件数量多但需关注覆盖率是否达到目标
+6. **Bundle 体积**：Vite 构建产物 JS 约 1.2MB（gzip 后 394KB），可考虑代码分割优化
 
 ---
 
