@@ -568,3 +568,327 @@ class TechnicalBacktestService:
         cumulative_max = prices.cummax()
         drawdown = (prices - cumulative_max) / cumulative_max
         return float(drawdown.min() * 100)
+
+    # ============ v2.0: 策略配置 + 批量参数组回测 ============
+
+    STRATEGY_CONFIGS = [
+        {
+            "id": "dual_ma",
+            "name": "双均线交叉",
+            "description": "短周期均线上穿长周期均线时买入，下穿时卖出",
+            "category": "trend",
+            "parameters": [
+                {"key": "short_period", "name": "短周期", "type": "number",
+                 "default_value": 5, "min": 2, "max": 60, "step": 1},
+                {"key": "long_period", "name": "长周期", "type": "number",
+                 "default_value": 20, "min": 5, "max": 250, "step": 1},
+                {"key": "only_golden_cross", "name": "仅金叉买入", "type": "boolean",
+                 "default_value": True},
+            ],
+            "validation_rules": [
+                {"type": "less_than", "param_a": "short_period",
+                 "param_b": "long_period", "message": "短周期必须小于长周期"},
+            ],
+        },
+        {
+            "id": "macd",
+            "name": "MACD 金叉死叉",
+            "description": "MACD 柱状线由负转正时买入，由正转负时卖出",
+            "category": "trend",
+            "parameters": [
+                {"key": "fast_period", "name": "快线周期", "type": "number",
+                 "default_value": 12, "min": 5, "max": 30, "step": 1},
+                {"key": "slow_period", "name": "慢线周期", "type": "number",
+                 "default_value": 26, "min": 10, "max": 60, "step": 1},
+                {"key": "signal_period", "name": "信号线周期", "type": "number",
+                 "default_value": 9, "min": 3, "max": 20, "step": 1},
+            ],
+            "validation_rules": [
+                {"type": "less_than", "param_a": "fast_period",
+                 "param_b": "slow_period", "message": "快线周期必须小于慢线周期"},
+            ],
+        },
+        {
+            "id": "rsi",
+            "name": "RSI 超买超卖",
+            "description": "RSI 低于超卖阈值时买入，高于超买阈值时卖出",
+            "category": "oscillator",
+            "parameters": [
+                {"key": "period", "name": "RSI 周期", "type": "number",
+                 "default_value": 14, "min": 6, "max": 30, "step": 1},
+                {"key": "oversold", "name": "超卖阈值", "type": "number",
+                 "default_value": 30, "min": 10, "max": 40, "step": 5},
+                {"key": "overbought", "name": "超买阈值", "type": "number",
+                 "default_value": 70, "min": 60, "max": 90, "step": 5},
+            ],
+            "validation_rules": [
+                {"type": "less_than", "param_a": "oversold",
+                 "param_b": "overbought", "message": "超卖阈值必须小于超买阈值"},
+            ],
+        },
+        {
+            "id": "bollinger",
+            "name": "布林带突破",
+            "description": "价格触及下轨反弹时买入，触及上轨回落时卖出",
+            "category": "volatility",
+            "parameters": [
+                {"key": "period", "name": "周期", "type": "number",
+                 "default_value": 20, "min": 10, "max": 60, "step": 1},
+                {"key": "std_dev", "name": "标准差倍数", "type": "number",
+                 "default_value": 2.0, "min": 1.0, "max": 4.0, "step": 0.5},
+            ],
+            "validation_rules": [],
+        },
+    ]
+
+    def get_strategy_configs(self) -> List[Dict]:
+        """获取策略配置列表"""
+        return self.STRATEGY_CONFIGS
+
+    def run_batch_backtest(
+        self,
+        codes: List[str],
+        start_date: str,
+        end_date: str,
+        eval_window_days: int,
+        strategy_id: str,
+        param_groups: List[Dict],
+    ) -> Dict:
+        """批量参数组回测
+
+        为每个参数组运行回测，生成包含收益率曲线和交易明细的结果。
+        当前为 mock 阶段：基于基础信号按参数微调。
+        """
+        # 先获取基础回测结果（真实 K 线 + 信号）
+        base_result = self.run_backtest(
+            codes=codes,
+            start_date=start_date,
+            end_date=end_date,
+            eval_window_days=eval_window_days,
+        )
+
+        code = codes[0]
+        stock_data = base_result["per_stock"].get(code)
+        if stock_data is None:
+            raise ValueError(f"未找到 {code} 的回测数据")
+
+        kline_data = stock_data.get("kline_data", [])
+        base_signals = stock_data.get("signals", [])
+        base_evaluations = stock_data.get("evaluations", [])
+
+        results = []
+        for group in param_groups:
+            # 根据参数组调整信号（mock 阶段）
+            adjusted_signals = self._adjust_signals(
+                base_signals, strategy_id, group.get("params", {})
+            )
+
+            # 裁剪 evaluations 匹配调整后的信号数量
+            adjusted_evaluations = base_evaluations[: len(adjusted_signals)]
+
+            # 计算收益率曲线和交易明细
+            equity_curve, trades = self._calculate_equity_curve(
+                kline_data, adjusted_signals
+            )
+
+            # 构建股票结果
+            stock_result = {
+                **stock_data,
+                "signals": adjusted_signals,
+                "evaluations": adjusted_evaluations,
+                "total_signals": len(adjusted_signals),
+            }
+
+            results.append({
+                "group": group,
+                "stock_result": stock_result,
+                "equity_curve": equity_curve,
+                "trades": trades,
+            })
+
+        return {
+            "meta": {
+                "mode": "technical_batch",
+                "codes": codes,
+                "date_range": [start_date, end_date],
+                "eval_window_days": eval_window_days,
+                "strategy_id": strategy_id,
+                "generated_at": pd.Timestamp.now().isoformat(),
+            },
+            "results": results,
+        }
+
+    def _adjust_signals(
+        self,
+        signals: List[Dict],
+        strategy_id: str,
+        params: Dict[str, Any],
+    ) -> List[Dict]:
+        """根据参数微调信号（mock 阶段简化逻辑）"""
+        import random
+        random.seed(42)  # 固定种子保证可复现
+
+        filtered = list(signals)
+
+        if strategy_id == "dual_ma":
+            short_period = params.get("short_period", 5)
+            long_period = params.get("long_period", 20)
+            ratio = short_period / long_period if long_period else 0.5
+            keep_count = max(3, int(len(signals) * (1 - ratio * 0.5)))
+            filtered = signals[:keep_count]
+        elif strategy_id == "macd":
+            fast_period = params.get("fast_period", 12)
+            slow_period = params.get("slow_period", 26)
+            ratio = fast_period / slow_period if slow_period else 0.5
+            keep_count = max(3, int(len(signals) * (1 - ratio * 0.4)))
+            filtered = signals[:keep_count]
+        elif strategy_id == "rsi":
+            oversold = params.get("oversold", 30)
+            overbought = params.get("overbought", 70)
+            threshold_width = overbought - oversold
+            keep_count = max(
+                3, int(len(signals) * (1 - (threshold_width - 40) * 0.01))
+            )
+            filtered = signals[:keep_count]
+        elif strategy_id == "bollinger":
+            std_dev = params.get("std_dev", 2.0)
+            keep_count = max(3, int(len(signals) * (1 - (std_dev - 1.5) * 0.15)))
+            filtered = signals[:keep_count]
+
+        # 为每个信号添加微小随机扰动到 confidence，使不同参数组有差异
+        return [
+            {
+                **s,
+                "confidence": round(
+                    min(0.95, s["confidence"] + (random.random() - 0.5) * 0.1), 2
+                ),
+            }
+            for s in filtered
+        ]
+
+    def _calculate_equity_curve(
+        self,
+        kline_data: List[Dict],
+        signals: List[Dict],
+    ) -> Tuple[List[Dict], List[Dict]]:
+        """计算收益率曲线和交易明细"""
+        if not kline_data:
+            return [], []
+
+        INITIAL_CAPITAL = 100_000
+        BUY_FEE_RATE = 0.0003
+        SELL_FEE_RATE = 0.0013
+
+        initial_price = kline_data[0]["close"]
+        cash = INITIAL_CAPITAL
+        position = 0
+        trade_id = 0
+        trades = []
+        equity_curve = []
+
+        sorted_signals = sorted(signals, key=lambda s: s["date"])
+        signal_idx = 0
+        open_trade = None
+
+        for i, day in enumerate(kline_data):
+            next_day = kline_data[i + 1] if i + 1 < len(kline_data) else None
+
+            current_value = cash + position * day["close"]
+            benchmark_value = INITIAL_CAPITAL * (day["close"] / initial_price)
+
+            equity_curve.append({
+                "date": day["date"],
+                "strategy_value": round(current_value, 2),
+                "benchmark_value": round(benchmark_value, 2),
+            })
+
+            if next_day and signal_idx < len(sorted_signals):
+                sig = sorted_signals[signal_idx]
+                if sig["date"] == day["date"]:
+                    if sig["action"] == "buy" and position == 0 and sig.get("entry_price"):
+                        buy_price = next_day["open"]
+                        shares = int(cash / (buy_price * (1 + BUY_FEE_RATE)))
+                        if shares > 0:
+                            total_cost = shares * buy_price * (1 + BUY_FEE_RATE)
+                            cash -= total_cost
+                            position = shares
+                            open_trade = {
+                                "entry_date": next_day["date"],
+                                "entry_price": buy_price,
+                                "entry_shares": shares,
+                                "reason": ", ".join(sig.get("reasons", [])),
+                            }
+                    elif sig["action"] == "sell" and position > 0 and open_trade:
+                        sell_price = next_day["open"]
+                        total_proceeds = position * sell_price * (1 - SELL_FEE_RATE)
+                        cash += total_proceeds
+
+                        sell_total_fee = position * sell_price * SELL_FEE_RATE
+                        buy_total_fee = position * open_trade["entry_price"] * BUY_FEE_RATE
+                        pnl_amount = (
+                            position * (sell_price - open_trade["entry_price"])
+                            - sell_total_fee - buy_total_fee
+                        )
+                        return_pct = (
+                            pnl_amount / (open_trade["entry_price"] * position)
+                        ) * 100
+                        hold_days = max(
+                            1,
+                            (
+                                pd.Timestamp(next_day["date"])
+                                - pd.Timestamp(open_trade["entry_date"])
+                            ).days,
+                        )
+
+                        trade_id += 1
+                        trades.append({
+                            "id": trade_id,
+                            "entry_date": open_trade["entry_date"],
+                            "entry_price": open_trade["entry_price"],
+                            "exit_date": next_day["date"],
+                            "exit_price": sell_price,
+                            "return_pct": round(return_pct, 2),
+                            "pnl_amount": round(pnl_amount, 2),
+                            "hold_days": hold_days,
+                            "reason": open_trade["reason"],
+                        })
+                        position = 0
+                        open_trade = None
+                    signal_idx += 1
+
+        # 最后一个交易日若仍有持仓，按收盘价平仓
+        last_day = kline_data[-1]
+        if position > 0 and open_trade:
+            sell_price = last_day["close"]
+            total_proceeds = position * sell_price * (1 - SELL_FEE_RATE)
+            cash += total_proceeds
+
+            sell_total_fee = position * sell_price * SELL_FEE_RATE
+            buy_total_fee = position * open_trade["entry_price"] * BUY_FEE_RATE
+            pnl_amount = (
+                position * (sell_price - open_trade["entry_price"])
+                - sell_total_fee - buy_total_fee
+            )
+            return_pct = (
+                pnl_amount / (open_trade["entry_price"] * position)
+            ) * 100
+            hold_days = max(
+                1,
+                (pd.Timestamp(last_day["date"]) - pd.Timestamp(open_trade["entry_date"])).days,
+            )
+
+            trade_id += 1
+            trades.append({
+                "id": trade_id,
+                "entry_date": open_trade["entry_date"],
+                "entry_price": open_trade["entry_price"],
+                "exit_date": last_day["date"],
+                "exit_price": sell_price,
+                "return_pct": round(return_pct, 2),
+                "pnl_amount": round(pnl_amount, 2),
+                "hold_days": hold_days,
+                "reason": open_trade["reason"],
+            })
+            equity_curve[-1]["strategy_value"] = round(cash, 2)
+
+        return equity_curve, trades

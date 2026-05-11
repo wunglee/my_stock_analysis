@@ -149,27 +149,22 @@ class TestPrefetchStockNames(unittest.TestCase):
     def test_fetch_and_save_stock_data_uses_lightweight_name_lookup(self):
         pipeline = StockAnalysisPipeline.__new__(StockAnalysisPipeline)
         pipeline.fetcher_manager = MagicMock()
-        pipeline.db = MagicMock()
+        pipeline.caching_provider = MagicMock()
         pipeline.fetcher_manager.get_stock_name.return_value = "贵州茅台"
-        pipeline.db.has_today_data.return_value = False
-        pipeline.fetcher_manager.get_daily_data.return_value = (
-            pd.DataFrame(
-                [
-                    {
-                        "date": "2026-03-27",
-                        "open": 1.0,
-                        "high": 1.0,
-                        "low": 1.0,
-                        "close": 1.0,
-                        "volume": 1,
-                        "amount": 1.0,
-                        "pct_chg": 0.0,
-                    }
-                ]
-            ),
-            "dummy",
+        pipeline.caching_provider.get_daily_bars.return_value = pd.DataFrame(
+            [
+                {
+                    "date": "2026-03-27",
+                    "open": 1.0,
+                    "high": 1.0,
+                    "low": 1.0,
+                    "close": 1.0,
+                    "volume": 1,
+                    "amount": 1.0,
+                    "pct_chg": 0.0,
+                }
+            ]
         )
-        pipeline.db.save_daily_data.return_value = 1
 
         success, error = StockAnalysisPipeline.fetch_and_save_stock_data(pipeline, "600519")
 

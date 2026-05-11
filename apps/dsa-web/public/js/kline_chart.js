@@ -162,7 +162,7 @@
                     </div>
                     <div style="flex:1; min-height:0; position:relative;">
                         <div id="mainChart" style="position:absolute; inset:0;"></div>
-                        <div id="chipResizeHandle" style="display:none; position:absolute; top:6%; bottom:58%; width:6px; cursor:col-resize; z-index:10; background:rgba(100,100,100,0.15); border-radius:3px; transition:background 0.2s;"></div>
+                        <div id="chipResizeHandle" style="display:none; position:absolute; top:5%; bottom:47%; width:6px; cursor:col-resize; z-index:10; background:rgba(100,100,100,0.15); border-radius:3px; transition:background 0.2s;"></div>
                     </div>
                 </div>
             `
@@ -295,17 +295,20 @@
             const mainRight = chipVisible ? chipWidth + 20 : 40
 
             // ===== Grid 配置 =====
+            // K线区 : 指标区 = 2 : 1（上半部分高度是下半部分两倍）
+            // ECharts grid: top = 距容器顶, bottom = 距容器底
+            // K线: 5%~53% = 48%高度, 指标: 57%~81% = 24%高度, 间隙 4%
             const grids = [
-                { left: 40, right: mainRight, top: '6%', bottom: '58%' },   // K线
-                { left: 40, right: mainRight, top: '48%', bottom: '22%' }   // 指标
+                { left: 40, right: mainRight, top: '5%', bottom: '47%' },   // K线 (48%)
+                { left: 40, right: mainRight, top: '57%', bottom: '19%' }   // 指标 (24%)
             ]
 
             if (chipVisible) {
                 grids.push({
                     left: 'auto',
                     right: 10,
-                    top: '6%',
-                    bottom: '58%',
+                    top: '5%',
+                    bottom: '47%',
                     width: chipWidth
                 })
             }
@@ -340,11 +343,23 @@
             }
 
             // ===== Y轴配置 =====
+            const gridLineStyle = { color: 'rgba(148,163,184,0.06)' }
             const yAxes = [
-                { gridIndex: 0, type: 'value', min: unifiedMin, max: unifiedMax },
+                {
+                    gridIndex: 0,
+                    type: 'value',
+                    min: unifiedMin,
+                    max: unifiedMax,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    splitLine: { lineStyle: gridLineStyle }
+                },
                 {
                     gridIndex: 1,
                     type: 'value',
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    splitLine: { lineStyle: gridLineStyle },
                     axisLabel: {
                         formatter: function(value) {
                             if (value >= 100000000) return (value / 100000000).toFixed(1) + '亿'
@@ -530,16 +545,14 @@
                     type: 'bar',
                     xAxisIndex: 1,
                     yAxisIndex: 1,
-                    data: displayData.map(d => d.volume),
-                    itemStyle: {
-                        color: (params) => {
-                            const idx = params.dataIndex
-                            if (idx >= displayData.length) return '#64748b'
-                            const data = displayData[idx]
-                            if (!data || data.close === null || data.open === null) return '#64748b'
-                            return data.close >= data.open ? '#ef4444' : '#10b981'
+                    data: displayData.map(d => ({
+                        value: d.volume,
+                        itemStyle: {
+                            color: (d.close != null && d.open != null)
+                                ? (d.close >= d.open ? '#ef4444' : '#10b981')
+                                : '#64748b'
                         }
-                    },
+                    })),
                     barWidth: '60%'
                 }]
             }
@@ -1180,7 +1193,14 @@
                     State.chartInstance.setOption({
                         series: [{
                             name: '成交量',
-                            data: displayData.map(d => d.volume)
+                            data: displayData.map(d => ({
+                                value: d.volume,
+                                itemStyle: {
+                                    color: (d.close != null && d.open != null)
+                                        ? (d.close >= d.open ? '#ef4444' : '#10b981')
+                                        : '#64748b'
+                                }
+                            }))
                         }]
                     }, { notMerge: false, lazyUpdate: true })
                 } else if (indicator === 'MACD') {
@@ -1579,12 +1599,37 @@
             // 绑定 dataZoom 事件
             State.chartInstance.off('dataZoom')
             State.chartInstance.on('dataZoom', () => {
-                if (State.ui.chipVisible && State.ui.chipDate) {
-                    State.chartInstance.setOption({
-                        series: ChartBuilder.buildChipSeries(),
-                        graphic: ChartBuilder.buildChipGraphic()
-                    }, { notMerge: false, lazyUpdate: true })
+                const displayData = toDisplayKlineData()
+                if (displayData.length === 0) return
+
+                // 根据 dataZoom 百分比范围计算可见数据的价格区间
+                const dataZoomOpt = State.chartInstance.getOption().dataZoom[0]
+                const startPct = (dataZoomOpt.start || 0) / 100
+                const endPct = (dataZoomOpt.end || 100) / 100
+                const startIdx = Math.floor(startPct * displayData.length)
+                const endIdx = Math.min(Math.ceil(endPct * displayData.length), displayData.length - 1)
+                const visible = displayData.slice(startIdx, endIdx + 1)
+
+                const visibleMin = Math.min(...visible.map(d => d.low))
+                const visibleMax = Math.max(...visible.map(d => d.high))
+                const padding = (visibleMax - visibleMin) * 0.02
+                const yMin = Math.max(0, visibleMin - padding)
+                const yMax = visibleMax + padding
+
+                // yAxis 数组: [0]=K线价格轴, [1]=成交量轴, [2]=筹码价格轴
+                const yAxisUpdate = [{ min: yMin, max: yMax }]
+                if (State.ui.chipVisible) {
+                    // 筹码面板 yAxis 与 K线价格轴对齐，需要占位符跳过成交量轴
+                    yAxisUpdate.push({}, { min: yMin, max: yMax })
                 }
+                const updates = { yAxis: yAxisUpdate }
+
+                if (State.ui.chipVisible && State.ui.chipDate) {
+                    updates.series = ChartBuilder.buildChipSeries()
+                    updates.graphic = ChartBuilder.buildChipGraphic()
+                }
+
+                State.chartInstance.setOption(updates, { notMerge: false, lazyUpdate: true })
             })
 
             Layout.updateResizeHandle()

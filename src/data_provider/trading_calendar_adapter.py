@@ -40,6 +40,11 @@ class XCalTradingCalendar:
         self._tz_name = _MARKET_TZ.get(market)
         self._tz = pd.Timestamp.now(tz=self._tz_name).tz if self._tz_name else None
 
+    @property
+    def tz(self):
+        """时区信息，供下游适配器使用"""
+        return self._tz
+
     # ------------------------------------------------------------------ #
     # Internal helpers
     # ------------------------------------------------------------------ #

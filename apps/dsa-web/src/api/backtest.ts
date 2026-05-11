@@ -7,7 +7,15 @@ import type {
   BacktestResultItem,
   PerformanceMetrics,
 } from '../types/backtest';
-import type { TechnicalBacktestResult } from '../types/technicalBacktest';
+import type {
+  TechnicalBacktestResult,
+  StrategyConfig,
+  ParamGroup,
+  ParamGroupResult,
+  BacktestTemplateItem,
+} from '../types/technicalBacktest';
+// 所有 mock 数据已从后端 API 获取，前端不再维护本地 mock
+// 如需查看旧的前端 mock 实现，参见 git 历史中的 src/api/mock/backtestMock.ts
 
 // ============ API ============
 
@@ -126,15 +134,116 @@ export const backtestApi = {
     endDate?: string;
     evalWindowDays?: number;
   }): Promise<TechnicalBacktestResult> => {
+    const requestData: Record<string, unknown> = {
+      codes: params.codes,
+      eval_window_days: params.evalWindowDays ?? 10,
+    };
+    if (params.startDate) requestData.start_date = params.startDate;
+    if (params.endDate) requestData.end_date = params.endDate;
     const response = await apiClient.post<Record<string, unknown>>(
       '/api/v1/backtest/technical',
-      {
-        codes: params.codes,
-        start_date: params.startDate || '',
-        end_date: params.endDate || '',
-        eval_window_days: params.evalWindowDays ?? 10,
-      },
+      requestData,
     );
     return toCamelCase<TechnicalBacktestResult>(response.data);
+  },
+
+  // ============ v2.0: 策略配置 + 参数组回测（数据全部来自后端）============
+
+  /**
+   * 获取策略列表
+   * GET /api/v1/backtest/strategies
+   */
+  getStrategies: async (): Promise<StrategyConfig[]> => {
+    const response = await apiClient.get<Record<string, unknown>>(
+      '/api/v1/backtest/strategies',
+    );
+    const data = toCamelCase<{ strategies?: StrategyConfig[] }>(response.data);
+    return data.strategies || [];
+  },
+
+  /**
+   * 带参数组的批量回测
+   * POST /api/v1/backtest/technical/batch
+   *
+   * 后端完成全部计算：信号调整、收益率曲线、交易明细
+   */
+  runTechnicalBatch: async (params: {
+    codes: string[];
+    startDate: string;
+    endDate: string;
+    evalWindowDays: number;
+    strategyId: string;
+    paramGroups: Array<{
+      id: string;
+      name: string;
+      params: Record<string, number | boolean>;
+    }>;
+  }): Promise<ParamGroupResult[]> => {
+    const response = await apiClient.post<Record<string, unknown>>(
+      '/api/v1/backtest/technical/batch',
+      {
+        codes: params.codes,
+        start_date: params.startDate,
+        end_date: params.endDate,
+        eval_window_days: params.evalWindowDays,
+        strategy_id: params.strategyId,
+        param_groups: params.paramGroups.map((g) => ({
+          id: g.id,
+          name: g.name,
+          params: g.params,
+        })),
+      },
+    );
+
+    const data = toCamelCase<{ results?: ParamGroupResult[] }>(response.data);
+    return data.results || [];
+  },
+
+  // ============ P3: 参数组模板 CRUD ============
+
+  /**
+   * 获取指定策略的模板列表
+   * GET /api/v1/backtest/technical/templates?strategy_id=X
+   */
+  listTemplates: async (strategyId: string): Promise<BacktestTemplateItem[]> => {
+    const response = await apiClient.get<Record<string, unknown>>(
+      '/api/v1/backtest/technical/templates',
+      { params: { strategy_id: strategyId } },
+    );
+    const data = toCamelCase<{ templates?: BacktestTemplateItem[] }>(response.data);
+    return data.templates || [];
+  },
+
+  /**
+   * 保存参数组模板
+   * POST /api/v1/backtest/technical/templates
+   */
+  saveTemplate: async (data: {
+    strategyId: string;
+    name: string;
+    params: ParamGroup[];
+  }): Promise<BacktestTemplateItem> => {
+    const response = await apiClient.post<Record<string, unknown>>(
+      '/api/v1/backtest/technical/templates',
+      {
+        strategy_id: data.strategyId,
+        name: data.name,
+        params: data.params.map((g) => ({
+          id: g.id,
+          name: g.name,
+          enabled: g.enabled,
+          params: g.params,
+        })),
+      },
+    );
+    return toCamelCase<BacktestTemplateItem>(response.data);
+  },
+
+  /**
+   * 删除参数组模板
+   * DELETE /api/v1/backtest/technical/templates/{id}
+   */
+  deleteTemplate: async (id: number): Promise<void> => {
+    await apiClient.delete(`/api/v1/backtest/technical/templates/${id}`);
   },
 };

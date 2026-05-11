@@ -32,6 +32,12 @@ export interface StockAutocompleteProps {
   className?: string;
   /** Override the search query extracted from value (e.g., last token of multi-stock input) */
   searchQuery?: string;
+  /**
+   * Whether selecting a suggestion immediately triggers onSubmit.
+   * true (default) = select triggers submit (e.g., filter mode)
+   * false = select only updates input; user must press Enter again to submit
+   */
+  submitOnSelect?: boolean;
 }
 
 function FallbackInput({
@@ -101,6 +107,7 @@ function StockAutocompleteInner({
   placeholder = '输入股票代码或名称',
   className,
   searchQuery,
+  submitOnSelect = true,
 }: StockAutocompleteProps) {
   const { index, loading, fallback } = useStockIndex();
   const {
@@ -122,6 +129,7 @@ function StockAutocompleteInner({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const prevValueRef = useRef(value);
+  const isSelectingRef = useRef(false);
   const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left: number; width: string } | null>(null);
 
   const updateDropdownPosition = () => {
@@ -145,7 +153,12 @@ function StockAutocompleteInner({
 
   // Sync external value with internal query (only when value truly changes)
   // Uses searchQuery (if provided) to extract the actual search term from multi-stock input
+  // Skips when value change originated from an internal selection (prevents dropdown re-open)
   useEffect(() => {
+    if (isSelectingRef.current) {
+      isSelectingRef.current = false;
+      return;
+    }
     const effectiveQuery = searchQuery ?? value;
     if (prevValueRef.current !== effectiveQuery) {
       setQuery(effectiveQuery);
@@ -194,15 +207,21 @@ function StockAutocompleteInner({
         break;
       case 'Enter':
         e.preventDefault();
-        if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
-          // Select highlighted item
+        if (isOpen && highlightedIndex >= 0 && suggestions[highlightedIndex]) {
+          isSelectingRef.current = true;
           const selected = suggestions[highlightedIndex];
-          onChange(selected.displayCode);
+          const newValue =
+            searchQuery && value !== searchQuery
+              ? value.slice(0, value.length - searchQuery.length) + selected.displayCode
+              : selected.displayCode;
+          onChange(newValue);
           closeSuggestions();
-          onSubmit(selected.canonicalCode, selected.nameZh, 'autocomplete');
+          if (submitOnSelect) {
+            onSubmit(selected.canonicalCode, selected.nameZh, 'autocomplete');
+          }
         } else {
-          // Submit directly
-          onSubmit(value);
+          // 无高亮项 → 确认完成输入，触发提交
+          onSubmit(value, undefined, 'manual');
         }
         break;
       case 'Escape':
@@ -283,12 +302,16 @@ function StockAutocompleteInner({
           suggestions={suggestions}
           highlightedIndex={highlightedIndex}
           onSelect={(s) => {
-            // Update external value (shown in input box)
-            onChange(s.displayCode);
-            // Close dropdown list
+            isSelectingRef.current = true;
+            const newValue =
+              searchQuery && value !== searchQuery
+                ? value.slice(0, value.length - searchQuery.length) + s.displayCode
+                : s.displayCode;
+            onChange(newValue);
             closeSuggestions();
-            // Submit analysis
-            onSubmit(s.canonicalCode, s.nameZh, 'autocomplete');
+            if (submitOnSelect) {
+              onSubmit(s.canonicalCode, s.nameZh, 'autocomplete');
+            }
           }}
           onMouseEnter={(index) => setHighlightedIndex(index)}
           style={{ position: 'fixed', ...dropdownStyle }}

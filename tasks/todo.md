@@ -91,6 +91,18 @@
 
 ---
 
+---
+## P3 代码评审：延后项 (非阻塞)
+
+> 来源：2026-05-10 多角度代码质量评审 (SOLID / 内聚耦合 / DRY / 编码规范)
+
+- [ ] **W4: useTechnicalBacktest.ts Hook 职责拆分 (SRP)** — 将模板 CRUD 逻辑提取到独立 `useTechnicalTemplates` hook；将 sessionStorage 抽象为通用 `useSessionState` hook。当前 371 行承载 6 个关注点（策略/参数组/回测/模板/持久化/验证）
+- [ ] **W6: TemplateManager 替换原生对话框** — 用 React Modal/Dialog 组件替换 `window.prompt` 和 `window.confirm`，避免阻塞事件循环，支持键盘导航和无障碍访问
+- [ ] **INFO: storage.py 大文件拆分** — 将 ORM 模型（含 `BacktestParamTemplate`）提取到 `src/models/` 独立目录，`storage.py` 当前 2300+ 行承载 DB 连接管理 + 所有模型定义
+- [ ] **INFO: BacktestTemplateRepository 注册到 `__init__.py`** — 与其他 repo（`AnalysisRepository`, `BacktestRepository`, `StockRepository`）保持包接口一致性
+- [ ] **INFO: 参数组最大数量常量提取** — `6` 硬编码在 `useTechnicalBacktest.ts` 和 `ParamGroupEditor.tsx` 两处，应提取为共享常量
+
+---
 ## 总结
 
 | Phase | 任务数 | 预计工期 | 核心产出 |

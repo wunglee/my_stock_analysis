@@ -1,7 +1,10 @@
 import type React from 'react';
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Check, Minus, X } from 'lucide-react';
 import { StockAutocomplete } from '../components/StockAutocomplete';
+import { ParamGroupEditor } from '../components/backtest/ParamGroupEditor';
+import { TemplateManager } from '../components/backtest/TemplateManager';
+import { ParamGroupResultRow } from '../components/backtest/ParamGroupResultRow';
 import { backtestApi } from '../api/backtest';
 import type { ParsedApiError } from '../api/error';
 import { getParsedApiError } from '../api/error';
@@ -11,7 +14,8 @@ import type {
   BacktestRunResponse,
   PerformanceMetrics,
 } from '../types/backtest';
-import type { TechnicalBacktestResult, TechnicalBacktestStockResult } from '../types/technicalBacktest';
+import { useTechnicalBacktest } from '../hooks/useTechnicalBacktest';
+import { useKlineOverlay } from '../hooks/useKlineOverlay';
 
 const BACKTEST_COMPACT_INPUT_CLASS =
   'input-surface input-focus-glow h-10 rounded-xl border bg-transparent px-3 py-2 text-xs transition-all focus:outline-none disabled:cursor-not-allowed disabled:opacity-60';
@@ -100,147 +104,6 @@ function boolIcon(value?: boolean | null) {
   );
 }
 
-// ============ Technical Result Detail ============
-
-const TechnicalResultDetail: React.FC<{ result: TechnicalBacktestStockResult }> = ({ result }) => {
-  const klineContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // 确保 kline_chart.js 已加载
-    if (typeof window.KlineChart === 'undefined') {
-      console.warn('KlineChart not loaded yet');
-      return;
-    }
-    // 回测场景禁用实时K线更新，避免请求不存在的端点
-    window.KlineChart.setRealtimeUpdateEnabled(false);
-    // 设置当前股票
-    window.KlineChart.setCurrent(
-      { id: result.code, name: result.stockName },
-      'CN',
-      false,
-    );
-  }, [result.code, result.stockName]);
-
-  const actionBadge = (action: string) => {
-    switch (action) {
-      case 'buy': return <Badge variant="success">买入</Badge>;
-      case 'sell': return <Badge variant="danger">卖出</Badge>;
-      case 'hold': return <Badge variant="warning">持有</Badge>;
-      default: return <Badge variant="default">观望</Badge>;
-    }
-  };
-
-  return (
-    <div className="animate-fade-in space-y-4 px-4 pb-4">
-      {/* K-Line Chart */}
-      <div>
-        <h4 className="text-xs font-medium text-muted-text mb-2 uppercase">K线信号叠加</h4>
-        <div className="rounded-lg border border-white/5 bg-card/20 overflow-hidden">
-          <div ref={klineContainerRef} id="klineContainer" style={{ minHeight: 720 }} />
-        </div>
-      </div>
-
-      {/* Rules */}
-      <div>
-        <h4 className="text-xs font-medium text-muted-text mb-2 uppercase">发现规律</h4>
-        <div className="space-y-1.5">
-          {result.rules.map((rule, i) => (
-            <div key={i} className="flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <Badge variant={rule.winRate >= 0.6 ? 'success' : rule.winRate >= 0.5 ? 'warning' : 'default'}>
-                  {rule.name}
-                </Badge>
-                <span className="text-xs text-secondary-text truncate">{rule.condition}</span>
-              </div>
-              <div className="flex items-center gap-3 text-xs flex-shrink-0">
-                <span className="text-muted-text">样本 {rule.sampleCount}</span>
-                <span className={rule.winRate >= 0.6 ? 'text-success' : 'text-secondary-text'}>
-                  胜率 {(rule.winRate * 100).toFixed(0)}%
-                </span>
-                <span className="text-muted-text">置信 {(rule.confidence * 100).toFixed(0)}%</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Signals */}
-      <div>
-        <h4 className="text-xs font-medium text-muted-text mb-2 uppercase">交易信号</h4>
-        <div className="backtest-table-wrapper">
-          <table className="backtest-table min-w-[600px] w-full text-xs">
-            <thead className="backtest-table-head">
-              <tr>
-                <th className="backtest-table-head-cell">日期</th>
-                <th className="backtest-table-head-cell">操作</th>
-                <th className="backtest-table-head-cell">入场价</th>
-                <th className="backtest-table-head-cell">止损</th>
-                <th className="backtest-table-head-cell">止盈</th>
-                <th className="backtest-table-head-cell">理由</th>
-                <th className="backtest-table-head-cell">置信</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.signals.map((sig, i) => (
-                <tr key={i} className="backtest-table-row">
-                  <td className="backtest-table-cell">{sig.date}</td>
-                  <td className="backtest-table-cell">{actionBadge(sig.action)}</td>
-                  <td className="backtest-table-cell">{sig.entryPrice ?? '--'}</td>
-                  <td className="backtest-table-cell">{sig.stopLoss ?? '--'}</td>
-                  <td className="backtest-table-cell">{sig.takeProfit ?? '--'}</td>
-                  <td className="backtest-table-cell">
-                    <span className="text-xs text-secondary-text">{sig.reasons.join(', ')}</span>
-                  </td>
-                  <td className="backtest-table-cell">
-                    <span className={sig.confidence >= 0.7 ? 'text-success' : 'text-warning'}>
-                      {(sig.confidence * 100).toFixed(0)}%
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Evaluations */}
-      <div>
-        <h4 className="text-xs font-medium text-muted-text mb-2 uppercase">回测验证</h4>
-        <div className="backtest-table-wrapper">
-          <table className="backtest-table min-w-[600px] w-full text-xs">
-            <thead className="backtest-table-head">
-              <tr>
-                <th className="backtest-table-head-cell">信号日</th>
-                <th className="backtest-table-head-cell">操作</th>
-                <th className="backtest-table-head-cell">结果</th>
-                <th className="backtest-table-head-cell">收益</th>
-                <th className="backtest-table-head-cell">方向</th>
-                <th className="backtest-table-head-cell">止损</th>
-                <th className="backtest-table-head-cell">止盈</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.evaluations.map((ev, i) => (
-                <tr key={i} className="backtest-table-row">
-                  <td className="backtest-table-cell">{ev.signalDate}</td>
-                  <td className="backtest-table-cell">{ev.action}</td>
-                  <td className="backtest-table-cell">{outcomeBadge(ev.outcome)}</td>
-                  <td className={`backtest-table-cell ${ev.stockReturnPct > 0 ? 'text-success' : ev.stockReturnPct < 0 ? 'text-danger' : ''}`}>
-                    {ev.stockReturnPct > 0 ? '+' : ''}{ev.stockReturnPct.toFixed(1)}%
-                  </td>
-                  <td className="backtest-table-cell">{boolIcon(ev.directionCorrect)}</td>
-                  <td className="backtest-table-cell">{boolIcon(ev.hitStopLoss)}</td>
-                  <td className="backtest-table-cell">{boolIcon(ev.hitTakeProfit)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // ============ Metric Row ============
 
 const MetricRow: React.FC<{ label: string; value: string; accent?: boolean }> = ({ label, value, accent }) => (
@@ -305,10 +168,19 @@ const BacktestPage: React.FC = () => {
     document.title = '策略回测 - DSA';
   }, []);
 
+  // 默认日期范围：一年前至今
+  const today = new Date();
+  const oneYearAgo = new Date(today);
+  oneYearAgo.setFullYear(today.getFullYear() - 1);
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const defaultEndDate = fmt(today);
+  const defaultStartDate = fmt(oneYearAgo);
+
   // Input state
   const [codeFilter, setCodeFilter] = useState('');
-  const [analysisDateFrom, setAnalysisDateFrom] = useState('');
-  const [analysisDateTo, setAnalysisDateTo] = useState('');
+  const [analysisDateFrom, setAnalysisDateFrom] = useState(defaultStartDate);
+  const [analysisDateTo, setAnalysisDateTo] = useState(defaultEndDate);
   const [evalDays, setEvalDays] = useState('');
   const [forceRerun, setForceRerun] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -333,14 +205,82 @@ const BacktestPage: React.FC = () => {
 
   // Technical backtest state
   const [isTechnicalMode, setIsTechnicalMode] = useState(false);
-  const [isTechnicalRunning, setIsTechnicalRunning] = useState(false);
-  const [technicalError, setTechnicalError] = useState<ParsedApiError | null>(null);
-  const [technicalResult, setTechnicalResult] = useState<TechnicalBacktestResult | null>(null);
-  const [expandedStockCode, setExpandedStockCode] = useState<string | null>(null);
   const [technicalCodes, setTechnicalCodes] = useState('');
-  const [technicalStartDate, setTechnicalStartDate] = useState('');
-  const [technicalEndDate, setTechnicalEndDate] = useState('');
+  const [technicalStartDate, setTechnicalStartDate] = useState(defaultStartDate);
+  const [technicalEndDate, setTechnicalEndDate] = useState(defaultEndDate);
   const [technicalEvalDays, setTechnicalEvalDays] = useState('10');
+  const [klineLoaded, setKlineLoaded] = useState(false);
+
+  // 加载 K 线图（window.KlineChart 在 index.html 中通过 <script> 加载）
+  const doLoadKline = useCallback((codes: string) => {
+    const tokens = codes.split(/[,，\s]+/).filter(Boolean);
+    if (tokens.length === 0) return;
+
+    const code = tokens[0].trim();
+    const pureCode = code.replace(/\.(SH|SZ|HK|US)$/i, '');
+    setKlineLoaded(true);
+
+    requestAnimationFrame(() => {
+      window.KlineChart?.setCurrent({ id: pureCode }, 'CN', false);
+      window.KlineChart?.setRealtimeUpdateEnabled(false);
+    });
+  }, []);
+
+  const handleLoadKline = useCallback(() => {
+    doLoadKline(technicalCodes);
+  }, [technicalCodes, doLoadKline]);
+
+  // 切换模式时停止K线实时更新并重置加载状态
+  const handleModeSwitch = useCallback((technical: boolean) => {
+    if (!technical) {
+      window.KlineChart?.stopRealtimeKlineUpdateTimer();
+      setKlineLoaded(false);
+    }
+    setIsTechnicalMode(technical);
+  }, []);
+
+  // v2.0: 策略与参数组逻辑封装到 hook
+  const {
+    strategies,
+    selectedStrategyId,
+    setSelectedStrategyId,
+    selectedStrategy,
+    strategyError,
+    paramGroups,
+    addParamGroup,
+    removeParamGroup,
+    duplicateParamGroup,
+    updateParamValue,
+    updateGroupName,
+    toggleGroupEnabled,
+    setInvalidGroupIds,
+    batchResults,
+    isBatchRunning,
+    technicalError,
+    handleRunBatch,
+    templates,
+    isLoadingTemplates,
+    saveAsTemplate,
+    deleteTemplate,
+    loadTemplate,
+  } = useTechnicalBacktest({
+    technicalCodes,
+    technicalStartDate,
+    technicalEndDate,
+    technicalEvalDays,
+  });
+
+  // K线图 Overlay 管理
+  const {
+    activeGroupId,
+    setActiveGroupId,
+    shouldHideBuiltinMA,
+    setShouldHideBuiltinMA,
+  } = useKlineOverlay({
+    chartReady: klineLoaded,
+    paramGroups,
+    strategy: selectedStrategy,
+  });
 
   // 从多代码输入中提取最后一个 token 作为搜索关键词
   // 如果最后一个 token 已经是完整代码（带市场后缀），则不触发搜索
@@ -375,7 +315,7 @@ const BacktestPage: React.FC = () => {
       setCurrentPage(response.page);
       setPageError(null);
     } catch (err) {
-      console.error('Failed to fetch backtest results:', err);
+      // 错误已通过 setPageError 传递给 UI 展示
       setPageError(getParsedApiError(err));
     } finally {
       setIsLoadingResults(false);
@@ -410,7 +350,7 @@ const BacktestPage: React.FC = () => {
       }
       setPageError(null);
     } catch (err) {
-      console.error('Failed to fetch performance:', err);
+      // 错误已通过 setPageError 传递给 UI 展示
       setPageError(getParsedApiError(err));
     } finally {
       setIsLoadingPerf(false);
@@ -431,7 +371,7 @@ const BacktestPage: React.FC = () => {
       fetchResults(1, undefined, windowDays, undefined, undefined);
     };
     init();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchResults]);
 
   // Run backtest
   const handleRun = async () => {
@@ -455,34 +395,6 @@ const BacktestPage: React.FC = () => {
       setRunError(getParsedApiError(err));
     } finally {
       setIsRunning(false);
-    }
-  };
-
-  // Run technical backtest (real API)
-  const handleRunTechnical = async () => {
-    const codes = technicalCodes
-      .split(/[,，\s]+/)
-      .map((c) => c.trim())
-      .filter(Boolean);
-    if (codes.length === 0) return;
-    if (!technicalStartDate || !technicalEndDate) return;
-
-    setIsTechnicalRunning(true);
-    setTechnicalResult(null);
-    setTechnicalError(null);
-    setExpandedStockCode(null);
-    try {
-      const result = await backtestApi.runTechnical({
-        codes,
-        startDate: technicalStartDate,
-        endDate: technicalEndDate,
-        evalWindowDays: parseInt(technicalEvalDays, 10) || 10,
-      });
-      setTechnicalResult(result);
-    } catch (err) {
-      setTechnicalError(getParsedApiError(err));
-    } finally {
-      setIsTechnicalRunning(false);
     }
   };
 
@@ -524,7 +436,7 @@ const BacktestPage: React.FC = () => {
         <div className="flex items-center gap-1 mb-3">
           <button
             type="button"
-            onClick={() => setIsTechnicalMode(false)}
+            onClick={() => handleModeSwitch(false)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               !isTechnicalMode
                 ? 'bg-accent text-accent-foreground'
@@ -535,7 +447,7 @@ const BacktestPage: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => setIsTechnicalMode(true)}
+            onClick={() => handleModeSwitch(true)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               isTechnicalMode
                 ? 'bg-accent text-accent-foreground'
@@ -548,32 +460,26 @@ const BacktestPage: React.FC = () => {
 
         {isTechnicalMode ? (
           <>
-          {/* Technical Mode Controls */}
-          <div className="flex max-w-5xl flex-wrap items-center gap-2">
+          {/* v2.0 Technical Mode Controls */}
+          {/* Row 1: Stock + Dates + Load Kline（始终可见） */}
+          <div className="flex max-w-5xl flex-wrap items-center gap-2 mb-3">
             <div className="relative min-w-0 flex-[1_1_220px]">
               <StockAutocomplete
                 value={technicalCodes}
                 onChange={setTechnicalCodes}
                 searchQuery={technicalSearchQuery}
-                onSubmit={(code, _name, source) => {
-                  if (source === 'autocomplete') {
-                    const tokens = technicalCodes
-                      .split(/[,，\s]+/)
-                      .map((c) => c.trim())
-                      .filter(Boolean);
-                    // 去掉最后一个 token（用户正在搜索的部分输入），替换为选中代码
-                    const existing = tokens.slice(0, -1);
-                    if (!existing.includes(code)) {
-                      setTechnicalCodes(
-                        existing.length > 0 ? `${existing.join(', ')}, ${code}` : code,
-                      );
-                    } else {
-                      setTechnicalCodes(existing.join(', '));
-                    }
+                submitOnSelect={false}
+                onSubmit={(code, _name, _source) => {
+                  // 二次回车确认 → 触发 K 线加载
+                  // 选中下拉项时仅更新输入框（通过 onChange），不触发此回调
+                  const codes = code.trim();
+                  if (codes) {
+                    setTechnicalCodes(codes);
+                    doLoadKline(codes);
                   }
                 }}
                 placeholder="输入股票代码，逗号分隔（如：600519,000858）"
-                disabled={isTechnicalRunning}
+                disabled={isBatchRunning}
               />
             </div>
             <div className="flex items-center gap-2 whitespace-nowrap">
@@ -610,25 +516,112 @@ const BacktestPage: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={handleRunTechnical}
-              disabled={isTechnicalRunning}
-              className="btn-primary flex items-center gap-1.5 whitespace-nowrap"
+              onClick={handleLoadKline}
+              disabled={!technicalCodes.trim() || isBatchRunning}
+              className="btn-secondary flex items-center gap-1.5 whitespace-nowrap"
             >
-              {isTechnicalRunning ? (
-                <>
-                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  分析中...
-                </>
-              ) : (
-                '运行纯技术回测'
-              )}
+              加载K线
             </button>
           </div>
-          {technicalError && (
-            <ApiErrorAlert error={technicalError} className="mt-2 max-w-4xl" />
+
+          {/* K线加载后：K线图 + 回测参数面板 */}
+          {klineLoaded && (
+            <>
+              {/* K线图容器（window.KlineChart 直接操作此 DOM） */}
+              <div className="max-w-5xl mb-3">
+                <div
+                  id="klineContainer"
+                  style={{ width: '100%', minHeight: 900 }}
+                />
+              </div>
+
+              {/* 回测参数面板：策略 + 模板 + 参数组 + 运行 */}
+              <Card variant="gradient" padding="md" className="max-w-5xl mb-3 animate-fade-in">
+                {/* 策略选择 + 运行按钮 */}
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 whitespace-nowrap">
+                    <span className="text-xs text-muted-text">策略</span>
+                    <select
+                      value={selectedStrategyId}
+                      onChange={(e) => setSelectedStrategyId(e.target.value)}
+                      disabled={isBatchRunning}
+                      className={`${BACKTEST_COMPACT_INPUT_CLASS} w-40 cursor-pointer`}
+                    >
+                      {strategies.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRunBatch}
+                    disabled={isBatchRunning || !selectedStrategyId}
+                    className="btn-primary flex items-center gap-1.5 whitespace-nowrap"
+                  >
+                    {isBatchRunning ? (
+                      <>
+                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        回测中...
+                      </>
+                    ) : (
+                      '运行批量回测'
+                    )}
+                  </button>
+                </div>
+
+                {/* 图表显示选项 */}
+                <div className="flex items-center gap-3 mb-3">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-secondary-text hover:text-foreground transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={shouldHideBuiltinMA}
+                      onChange={(e) => setShouldHideBuiltinMA(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-white/20 bg-transparent accent-cyan-500"
+                    />
+                    隐藏内置MA线
+                  </label>
+                </div>
+
+                {/* 模板管理 */}
+                <TemplateManager
+                  templates={templates}
+                  isLoading={isLoadingTemplates}
+                  onLoad={loadTemplate}
+                  onDelete={deleteTemplate}
+                  onSave={saveAsTemplate}
+                  disabled={isBatchRunning}
+                />
+
+                {/* 参数组编辑器 */}
+                <div className="mt-3">
+                  <ParamGroupEditor
+                    strategy={selectedStrategy}
+                    paramGroups={paramGroups}
+                    activeGroupId={activeGroupId}
+                    onSelectGroup={setActiveGroupId}
+                    onAdd={addParamGroup}
+                    onRemove={removeParamGroup}
+                    onDuplicate={duplicateParamGroup}
+                    onUpdateParam={updateParamValue}
+                    onUpdateName={updateGroupName}
+                    onToggleEnabled={toggleGroupEnabled}
+                    onValidationChange={setInvalidGroupIds}
+                  />
+                </div>
+              </Card>
+
+              {strategyError && (
+                <ApiErrorAlert error={strategyError} className="mt-2 max-w-4xl" />
+              )}
+              {technicalError && (
+                <ApiErrorAlert error={technicalError} className="mt-2 max-w-4xl" />
+              )}
+            </>
           )}
           </>
         ) : (
@@ -750,56 +743,60 @@ const BacktestPage: React.FC = () => {
       <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 lg:flex-row">
         {isTechnicalMode ? (
           <>
-            {/* Left sidebar - Technical Summary */}
+            {/* Left sidebar - Batch Overview */}
             <div className="flex max-h-[38vh] flex-col gap-3 overflow-y-auto lg:max-h-none lg:w-60 lg:flex-shrink-0">
-              {technicalResult ? (
+              {selectedStrategy ? (
                 <Card variant="gradient" padding="md" className="animate-fade-in">
                   <div className="mb-3">
-                    <span className="label-uppercase">纯技术回测概览</span>
+                    <span className="label-uppercase">策略概览</span>
                   </div>
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-muted-text">股票数</span>
-                      <span className="text-secondary-text font-mono">{technicalResult.meta.codes.length}</span>
+                      <span className="text-muted-text">策略</span>
+                      <span className="text-secondary-text font-mono">{selectedStrategy.name}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-text">日期范围</span>
-                      <span className="text-secondary-text font-mono">{technicalResult.meta.dateRange[0]} ~ {technicalResult.meta.dateRange[1]}</span>
+                      <span className="text-muted-text">类别</span>
+                      <span className="text-secondary-text font-mono">{selectedStrategy.category}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-text">评估窗口</span>
-                      <span className="text-secondary-text font-mono">{technicalResult.meta.evalWindowDays} 天</span>
+                      <span className="text-muted-text">参数组</span>
+                      <span className="text-secondary-text font-mono">{paramGroups.filter(g => g.enabled).length} / {paramGroups.length}</span>
                     </div>
-                  </div>
-                  {technicalResult.crossStock && technicalResult.crossStock.correlations.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-white/5">
-                      <span className="label-uppercase mb-2 block">跨股票相关性</span>
-                      {technicalResult.crossStock.correlations.map((corr, i) => (
-                        <div key={i} className="flex justify-between text-xs">
-                          <span className="text-muted-text">{corr.codeA} ↔ {corr.codeB}</span>
-                          <span className={`font-mono ${corr.priceCorrelation >= 0.6 ? 'text-success' : 'text-secondary-text'}`}>
-                            {corr.priceCorrelation.toFixed(2)}
+                    {batchResults && batchResults.length > 0 && (
+                      <>
+                        <div className="mt-2 pt-2 border-t border-white/5">
+                          <span className="label-uppercase mb-1 block">回测结果</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-text">最佳参数组</span>
+                          <span className="text-success font-mono">
+                            {batchResults.reduce((best, r) => {
+                              const bestFinal = best.equityCurve[best.equityCurve.length - 1]?.strategyValue || 0;
+                              const rFinal = r.equityCurve[r.equityCurve.length - 1]?.strategyValue || 0;
+                              return rFinal > bestFinal ? r : best;
+                            }, batchResults[0])?.group.name}
                           </span>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      </>
+                    )}
+                  </div>
                 </Card>
               ) : (
                 <EmptyState
-                  title="暂无数据"
-                  description="运行纯技术回测以查看结果。"
+                  title="加载中"
+                  description="正在加载策略配置..."
                   className="h-full min-h-[12rem] border-dashed bg-card/45 shadow-none"
                 />
               )}
             </div>
 
-            {/* Right content - Technical Results */}
+            {/* Right content - Batch Results */}
             <section className="min-h-0 flex-1 overflow-y-auto">
-              {!technicalResult ? (
+              {!batchResults ? (
                 <EmptyState
                   title="等待运行"
-                  description="输入股票代码和日期范围，点击运行纯技术回测。"
+                  description="选择策略、配置参数组，点击运行批量回测。"
                   className="backtest-empty-state border-dashed"
                   icon={(
                     <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -808,55 +805,18 @@ const BacktestPage: React.FC = () => {
                   )}
                 />
               ) : (
-                <div className="animate-fade-in space-y-3">
+                <div className="animate-fade-in space-y-4">
                   <div className="backtest-table-toolbar">
                     <div className="backtest-table-toolbar-meta">
-                      <span className="label-uppercase">纯技术回测结果</span>
+                      <span className="label-uppercase">批量回测结果对比</span>
                       <span className="text-xs text-secondary-text">
-                        {technicalResult.meta.codes.join(', ')} · {technicalResult.meta.dateRange[0]} ~ {technicalResult.meta.dateRange[1]}
+                        {selectedStrategy?.name} · {batchResults.length} 组参数 · {batchResults[0]?.stockResult?.code ?? '--'}
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    {Object.values(technicalResult.perStock).map((stock) => (
-                      <div key={stock.code} className="rounded-xl border border-white/5 bg-card/30 overflow-hidden">
-                        {/* Summary row - clickable */}
-                        <div
-                          className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-white/[0.03] transition-colors"
-                          onClick={() => setExpandedStockCode(expandedStockCode === stock.code ? null : stock.code)}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-sm font-medium text-foreground">{stock.code}</span>
-                            <span className="text-xs text-muted-text truncate">{stock.stockName}</span>
-                            <span className="text-xs text-muted-text">{stock.dateRange}</span>
-                          </div>
-                          <div className="flex items-center gap-4 text-xs flex-shrink-0">
-                            <span className="text-muted-text">信号 <span className="text-secondary-text font-mono">{stock.totalSignals}</span></span>
-                            <span className={stock.winRate >= 0.6 ? 'text-success' : 'text-warning'}>
-                              胜率 <span className="font-mono">{(stock.winRate * 100).toFixed(0)}%</span>
-                            </span>
-                            <span className={stock.avgReturn >= 0 ? 'text-success' : 'text-danger'}>
-                              均收 <span className="font-mono">{stock.avgReturn > 0 ? '+' : ''}{stock.avgReturn.toFixed(1)}%</span>
-                            </span>
-                            <span className="text-danger">
-                              回撤 <span className="font-mono">{stock.maxDrawdown.toFixed(1)}%</span>
-                            </span>
-                            <svg
-                              className={`h-4 w-4 text-muted-text transition-transform ${expandedStockCode === stock.code ? 'rotate-180' : ''}`}
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </div>
-                        </div>
-
-                        {/* Expanded detail */}
-                        {expandedStockCode === stock.code && (
-                          <TechnicalResultDetail result={stock} />
-                        )}
-                      </div>
+                  <div className="space-y-4">
+                    {batchResults.map((result) => (
+                      <ParamGroupResultRow key={result.group.id} result={result} />
                     ))}
                   </div>
                 </div>

@@ -798,6 +798,7 @@ class Config:
 
     # === 回测配置 ===
     backtest_enabled: bool = True
+    technical_backtest_enabled: bool = True
     backtest_eval_window_days: int = 10
     backtest_min_age_days: int = 14
     backtest_engine_version: str = "v1"
@@ -1471,6 +1472,7 @@ class Config:
             ),
             save_context_snapshot=os.getenv('SAVE_CONTEXT_SNAPSHOT', 'true').lower() == 'true',
             backtest_enabled=os.getenv('BACKTEST_ENABLED', 'true').lower() == 'true',
+            technical_backtest_enabled=os.getenv('TECHNICAL_BACKTEST_ENABLED', 'true').lower() == 'true',
             backtest_eval_window_days=parse_env_int(os.getenv('BACKTEST_EVAL_WINDOW_DAYS'), 10, field_name='BACKTEST_EVAL_WINDOW_DAYS', minimum=1),
             backtest_min_age_days=parse_env_int(os.getenv('BACKTEST_MIN_AGE_DAYS'), 14, field_name='BACKTEST_MIN_AGE_DAYS', minimum=1),
             backtest_engine_version=os.getenv('BACKTEST_ENGINE_VERSION', 'v1'),

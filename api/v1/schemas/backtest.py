@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -168,3 +168,114 @@ class TechnicalBacktestResponse(BaseModel):
     meta: Dict[str, Any]
     per_stock: Dict[str, TechnicalStockResult]
     cross_stock: Dict[str, List[TechnicalCorrelationItem]]
+
+
+# ============ v2.0: 策略配置 + 批量参数组回测 Schema ============
+
+class StrategyParameterItem(BaseModel):
+    key: str
+    name: str
+    type: Literal["number", "boolean"]
+    default_value: Union[int, float, bool]
+    min: Optional[float] = None
+    max: Optional[float] = None
+    step: Optional[float] = None
+
+
+class ValidationRuleItem(BaseModel):
+    type: Literal["lessThan", "greaterThan"]
+    param_a: str
+    param_b: str
+    message: str
+
+
+class StrategyConfigItem(BaseModel):
+    id: str
+    name: str
+    description: str
+    category: str  # "trend" | "oscillator" | "volatility" | "volume"
+    parameters: List[StrategyParameterItem] = Field(default_factory=list)
+    validation_rules: List[ValidationRuleItem] = Field(default_factory=list)
+
+
+class ParamGroupRequest(BaseModel):
+    id: str
+    name: str
+    params: Dict[str, Union[int, float, bool]]
+
+
+class TechnicalBatchRequest(BaseModel):
+    codes: List[str] = Field(..., min_length=1, max_length=1)
+    start_date: str
+    end_date: str
+    eval_window_days: int = Field(10, ge=1, le=120)
+    strategy_id: str
+    param_groups: List[ParamGroupRequest] = Field(..., min_length=1, max_length=6)
+
+
+class EquityCurvePointItem(BaseModel):
+    date: str
+    strategy_value: float
+    benchmark_value: float
+
+
+class TradeRecordItem(BaseModel):
+    id: int
+    entry_date: str
+    entry_price: float
+    exit_date: str
+    exit_price: float
+    return_pct: float
+    pnl_amount: float
+    hold_days: int
+    reason: str
+
+
+class ParamGroupResultItem(BaseModel):
+    group: ParamGroupRequest
+    status: Literal["success", "insufficient_data", "error"] = "success"
+    error_message: Optional[str] = Field(None, description="错误详情，status 非 success 时填充")
+    stock_result: Optional[TechnicalStockResult] = None
+    equity_curve: List[EquityCurvePointItem] = Field(default_factory=list)
+    trades: List[TradeRecordItem] = Field(default_factory=list)
+
+
+class StrategyListResponse(BaseModel):
+    strategies: List[StrategyConfigItem] = Field(default_factory=list)
+
+
+class BatchMeta(BaseModel):
+    """批量回测批次元数据"""
+    mode: str = "technical_batch"
+    codes: List[str] = Field(default_factory=list)
+    date_range: str = ""
+    eval_window_days: int = 0
+    strategy_id: str
+    generated_at: str = ""
+    error: Optional[str] = None
+
+
+class TechnicalBatchResponse(BaseModel):
+    meta: BatchMeta
+    results: List[ParamGroupResultItem] = Field(default_factory=list)
+
+
+# ============ P3: 参数组模板 Schema ============
+
+class TemplateSaveRequest(BaseModel):
+    strategy_id: str = Field(..., min_length=1, max_length=64)
+    name: str = Field(..., min_length=1, max_length=128)
+    params: List[Dict] = Field(..., min_length=1, max_length=6)
+
+
+class TemplateItem(BaseModel):
+    id: int
+    strategy_id: str
+    name: str
+    params: List[Dict]
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class TemplateListResponse(BaseModel):
+    templates: List[TemplateItem] = Field(default_factory=list)

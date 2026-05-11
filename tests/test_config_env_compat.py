@@ -60,6 +60,7 @@ class ConfigEnvCompatibilityTestCase(unittest.TestCase):
     ) -> None:
         env = {
             "RUN_IMMEDIATELY": "false",
+            "ENV_FILE": "/does/not/exist/.env",
         }
 
         with patch.dict(os.environ, env, clear=True):
@@ -95,6 +96,7 @@ class ConfigEnvCompatibilityTestCase(unittest.TestCase):
     ) -> None:
         env = {
             "RUN_IMMEDIATELY": "",
+            "ENV_FILE": "/does/not/exist/.env",
         }
 
         with patch.dict(os.environ, env, clear=True):

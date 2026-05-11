@@ -14,6 +14,11 @@ from tests.litellm_stub import ensure_litellm_stub
 
 ensure_litellm_stub()
 
+# 防止 main.py 的 setup_env() 加载真实项目 .env，避免将
+# PORTFOLIO_RISK_DRAWDOWN_ALERT_PCT 等配置写入 os.environ，
+# 污染依赖 os.environ 优先级的 Config._resolve_env_value 路径。
+os.environ["ENV_FILE"] = "/does/not/exist/.env"
+
 import main
 from src.config import Config
 

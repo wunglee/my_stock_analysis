@@ -671,7 +671,7 @@ def run_batch(self, request: TechnicalBatchRequest) -> BatchResult:
 
 | 场景 | 策略 | 说明 |
 |------|------|------|
-| 策略不存在 | 400 Bad Request | 前端应提前校验，但后端兜底 |
+| 策略不存在 | 200 + meta.error | 返回所有参数组的 error 结果，meta.error 携带策略不存在信息 |
 | 参数校验失败 | 400 + 详细错误 | 返回具体失败的参数组和规则 |
 | K 线数据不足 | 200 + 部分结果 | 该参数组标记为 `insufficient_data` |
 | 单组执行异常 | 200 + 部分结果 | 异常组标记为 `error`，其他组正常返回 |
@@ -716,14 +716,28 @@ def run_batch(self, request: TechnicalBatchRequest) -> BatchResult:
 }
 ```
 
-**策略不存在（400）**：
+**策略不存在（200 + meta.error）**：
 
 ```json
 {
-  "detail": {
-    "error": "invalid_params",
-    "message": "策略不存在: unknown_strategy"
-  }
+  "meta": {
+    "mode": "technical_batch",
+    "codes": ["000001"],
+    "date_range": "2024-01-01~2024-12-31",
+    "eval_window_days": 10,
+    "strategy_id": "unknown_strategy",
+    "generated_at": "2026-05-09T00:00:00Z",
+    "error": "策略未找到: unknown_strategy"
+  },
+  "results": [
+    {
+      "group": { "id": "uuid-1", "name": "参数组 1", "params": {} },
+      "status": "error",
+      "error_message": "策略未找到: unknown_strategy",
+      "equity_curve": [],
+      "trades": []
+    }
+  ]
 }
 ```
 
@@ -846,7 +860,7 @@ interface TechnicalBacktestState {
 
 ### 4.5 结果持久化策略（短期）
 
-> **规划中，尚未实现**：当前 `useTechnicalBacktest` Hook 代码中无 `sessionStorage` 相关逻辑。
+> **已实现**：`useTechnicalBacktest` Hook 中将回测结果同步写入 `sessionStorage`，页面刷新后自动恢复。
 
 首批实现不将回测结果写入数据库（即时计算），但为避免页面刷新导致结果丢失，`useTechnicalBacktest` 应在 `batchResults` 变化时同步写入 `sessionStorage`：
 
@@ -1006,7 +1020,7 @@ const toCamelCase = (obj: unknown): unknown => { ... };
 
 ### 5.3 数据获取层选型
 
-> **本节描述 V2 目标实现。当前代码尚未迁移**：现有 `backtest.py` 中仍使用 v1 原型的 `TechnicalBacktestService.run_batch_backtest()`，未使用下文描述的 `CachingDataProviderAdapter` 和 `IDataFetcher` Protocol。V2 引擎实现后将替换。
+> **已实现**：端点通过 `get_v2_backtest_service()` 构造完整 DI 链（`DatabaseManager` → `SqliteBarRepository` → `CachingDataProvider` → `CachingDataProviderAdapter` → `V2BacktestService`），使用 `run_batch()` 执行批量参数组回测。
 
 技术回测的数据获取层复用 AI 回测已有的 `CachingDataProvider`（缓存优先策略）：
 
@@ -1084,7 +1098,7 @@ class IDataFetcher(Protocol):
 
 ### 5.4 FastAPI 端点实现
 
-> **本节描述 V2 目标实现。当前代码尚未迁移**：现有 `backtest.py` 中端点直接构造 `TechnicalBacktestService()` 并调用 `run_batch_backtest()` 方法（v1 原型）。V2 引擎实现后将替换为下文描述的 `get_backtest_service()` 工厂函数和 `service.run_batch()` 方法。
+> **已实现**：`api/v1/endpoints/technical_backtest.py` 中 `get_v2_backtest_service()` 构造完整 DI 链，端点使用 `service.run_batch()` 方法（v2.0 引擎）。
 
 > **实现策略**：首批实现可为同步端点（`def`），后续按需优化为 `async def` + `asyncio.to_thread`。原因：
 > - 当前批量回测为串行执行，单次请求计算量可控
@@ -1133,10 +1147,9 @@ def run_technical_batch(request: TechnicalBatchRequest):
 
     try:
         result = service.run_batch(request)
-        # 直接返回 TechnicalBatchResponse（扁平结构：{meta, results}）
+        # run_batch 内部处理策略不存在（200 + meta.error）和数据不足（200 + 部分结果），
+        # 仅参数校验失败和未预期异常才会 raise 到端点层
         return result
-    except StrategyNotFoundError as e:
-        raise HTTPException(status_code=400, detail=str(e))
     except ValueError as e:
         # **有意识取舍**：ParamValidationError 继承自 ValueError，此处统一捕获。
         # 当前阶段仅返回 str(e) 的简要错误信息，ParamValidationError 的 group_id/errors
@@ -1292,7 +1305,7 @@ useEffect(() => {
 1. **AI 回测端点不变**：`/run`, `/results`, `/performance` 行为不受影响
 2. **AI Schema 不修改**：技术回测的 Schema 在独立命名空间，不与 AI 回测 Schema 冲突
 3. **前端路由不变**：`/backtest` 页面通过 Tab 切换，不新增路由
-4. **数据库不触碰**：技术回测结果即时计算，不写入现有表结构
+4. **数据库不触碰**：核心引擎即时计算不写入 AI 回测表；P3 阶段新增独立的 `backtest_param_templates` 表
 5. **全局状态隔离**：技术回测状态封装在 `useTechnicalBacktest` 中，不污染 AI 回测的 Zustand Store
 
 ---
@@ -1335,8 +1348,8 @@ gantt
 | P1 | `/technical/batch` 端点 | 前端联调入口 |
 | P2 | MACD / RSI / Bollinger 策略 | 扩展策略库 |
 | P2 | 前端结果渲染优化 | 大数据量下的图表性能 |
-| P3 | 回测结果持久化 | 保存历史回测记录到数据库 |
-| P3 | 参数组模板保存 | 用户可保存常用参数配置 |
+| P3 🔄 | 回测结果持久化 | 保存历史回测记录到数据库（进行中） |
+| P3 🔄 | 参数组模板保存 | 用户可保存常用参数配置（进行中） |
 
 ### 7.3 回滚策略
 

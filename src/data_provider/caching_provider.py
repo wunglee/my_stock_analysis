@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 from typing import Optional
 
@@ -19,6 +20,9 @@ from src.data_provider.interfaces import (
 )
 
 logger = logging.getLogger(__name__)
+
+# 外部数据源拉取超时（秒），超时后回退到缓存数据
+_EXTERNAL_FETCH_TIMEOUT = 10
 
 
 class CachingDataProvider:
@@ -46,12 +50,35 @@ class CachingDataProvider:
     # ------------------------------------------------------------------ #
     # Daily bars
     # ------------------------------------------------------------------ #
-    @staticmethod
-    def _normalize_date(ts: pd.Timestamp) -> pd.Timestamp:
-        """统一为日期零点 Timestamp（保留时区信息，避免破坏下游 aware 要求）"""
+    def _normalize_date(self, ts: pd.Timestamp) -> pd.Timestamp:
+        """统一为日期零点 Timestamp（naive 时间戳自动补全时区）"""
         if ts is None:
             return ts
-        return pd.Timestamp(ts).normalize()
+        ts = pd.Timestamp(ts)
+        if ts.tz is None and self._calendar.tz is not None:
+            ts = ts.tz_localize(self._calendar.tz)
+        return ts.normalize()
+
+    def _fetch_external_with_timeout(
+        self,
+        symbol: str,
+        start_date: pd.Timestamp,
+        end_date: pd.Timestamp,
+    ) -> pd.DataFrame | None:
+        """带超时的外部数据拉取，超时返回 None"""
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(
+                self._external.fetch_daily_bars, symbol, start_date, end_date
+            )
+            try:
+                return future.result(timeout=_EXTERNAL_FETCH_TIMEOUT)
+            except concurrent.futures.TimeoutError:
+                logger.warning(
+                    "[%s] External fetch timed out after %ds, falling back to cache",
+                    symbol,
+                    _EXTERNAL_FETCH_TIMEOUT,
+                )
+                return None
 
     def get_daily_bars(
         self,
@@ -90,34 +117,28 @@ class CachingDataProvider:
             logger.debug("[%s] Cache hit: %s ~ %s", symbol, start_date.date(), end_date.date())
             return cached
 
-        # 5. 有缺失，请求外部补全
+        # 5. 有缺失 — 将所有缺失区间合并为一次外部拉取（避免多次串行遍历 7 个数据源）
+        merged_start = min(s for s, _ in missing_ranges)
+        merged_end = max(e for _, e in missing_ranges)
         logger.info(
-            "[%s] Cache partial miss, missing ranges: %s",
+            "[%s] Cache partial miss, %d missing ranges merged to %s ~ %s",
             symbol,
-            [(s.strftime("%Y-%m-%d"), e.strftime("%Y-%m-%d")) for s, e in missing_ranges],
+            len(missing_ranges),
+            merged_start.strftime("%Y-%m-%d"),
+            merged_end.strftime("%Y-%m-%d"),
         )
 
-        fetched_parts: list[pd.DataFrame] = []
-        for miss_start, miss_end in missing_ranges:
-            part = self._external.fetch_daily_bars(symbol, miss_start, miss_end)
-            if part is not None and not part.empty:
-                fetched_parts.append(part)
-
-        if not fetched_parts:
-            # 外部也无数据，返回缓存（可能不完整）或 None
-            logger.warning("[%s] External fetch returned no data", symbol)
+        fetched = self._fetch_external_with_timeout(symbol, merged_start, merged_end)
+        if fetched is None or fetched.empty:
+            logger.warning("[%s] External fetch returned no data, using cache", symbol)
             return cached
 
-        # 6. 合并外部数据
-        fetched = pd.concat(fetched_parts, ignore_index=True)
-        fetched = fetched.sort_values("trade_date").reset_index(drop=True)
-
-        # 7. 自动保存到缓存
+        # 6. 自动保存到缓存
         if auto_save:
             saved = self._repository.save_daily_bars(fetched, symbol)
             logger.info("[%s] Auto-saved %d daily bars to cache", symbol, saved)
 
-        # 8. 合并缓存 + 外部数据返回
+        # 7. 合并缓存 + 外部数据返回
         if cached is not None and not cached.empty:
             combined = pd.concat([cached, fetched], ignore_index=True)
             combined = combined.drop_duplicates(subset=["trade_date"], keep="last")
@@ -137,8 +158,8 @@ class CachingDataProvider:
         end_date: pd.Timestamp,
         auto_save: bool = True,
     ) -> pd.DataFrame | None:
-        """直接请求外部数据，可选保存"""
-        df = self._external.fetch_daily_bars(symbol, start_date, end_date)
+        """直接请求外部数据，可选保存（也使用超时保护）"""
+        df = self._fetch_external_with_timeout(symbol, start_date, end_date)
         if df is None or df.empty:
             return None
 

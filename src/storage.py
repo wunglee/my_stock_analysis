@@ -2137,6 +2137,29 @@ def persist_llm_usage(
         logging.getLogger(__name__).warning("[LLM usage] failed to persist usage record: %s", exc)
 
 
+class BacktestParamTemplate(Base):
+    """技术回测参数组模板表 — 用户保存的常用参数配置"""
+
+    __tablename__ = 'backtest_param_templates'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    strategy_id = Column(String(64), nullable=False, index=True)
+    name = Column(String(128), nullable=False)
+    params = Column(Text, nullable=False)  # JSON: ParamGroup[]
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "strategy_id": self.strategy_id,
+            "name": self.name,
+            "params": json.loads(self.params),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 if __name__ == "__main__":
     # 测试代码
     logging.basicConfig(level=logging.DEBUG)
