@@ -32,6 +32,16 @@ class ITradingCalendar(Protocol):
         """返回指定日期的上一个交易日"""
         ...
 
+    def get_effective_trading_date(self, symbol: str) -> pd.Timestamp:
+        """根据目标市场盘前/盘后状态，返回最近的有效收盘日。
+
+        盘后且当日是交易日 → 返回当日；
+        盘前/交易中/非交易日 → 返回上一个交易日。
+
+        调用方可用此日期作为 end_date 上限，避免请求不存在的未来数据。
+        """
+        ...
+
 
 @runtime_checkable
 class IBarRepository(Protocol):

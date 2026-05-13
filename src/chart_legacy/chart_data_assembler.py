@@ -5,6 +5,7 @@
 """
 
 import logging
+import time
 from typing import Dict, Any, List, Optional
 
 import pandas as pd
@@ -38,6 +39,7 @@ class ChartDataAssembler:
             market_local_time = MarketTimeUtils.to_market_time_by_symbol(market_local_time, symbol)
 
             logger.info(f"开始组装图表数据: symbol={symbol}, period={period}, count={count}")
+            t_start = time.perf_counter()
 
             # 1. 获取K线数据
             if period == 'monthly':
@@ -46,7 +48,10 @@ class ChartDataAssembler:
                 warmup_count = 10
             else:
                 warmup_count = 30
+            t1 = time.perf_counter()
             price_data_full = self._fetch_kline_data(symbol, period, count + warmup_count, before, market_local_time)
+            t2 = time.perf_counter()
+            logger.info(f"[计时] 步骤1-获取K线: {(t2-t1)*1000:.0f}ms")
 
             if price_data_full is None or price_data_full.count == 0:
                 logger.info(f"无数据：{symbol}，返回空结果")
@@ -82,8 +87,10 @@ class ChartDataAssembler:
                 price_data_for_calculation = price_data_full
 
             # 2. 计算技术指标
-            logger.info(f"步骤2: 计算技术指标 ({indicators})...")
+            t2a = time.perf_counter()
             kline_with_ma_full, indicators_data_full = self._calculate_indicators(price_data_for_calculation, indicators)
+            t3 = time.perf_counter()
+            logger.info(f"[计时] 步骤2-技术指标: {(t3-t2a)*1000:.0f}ms")
 
             # 裁剪掉预热数据
             kline_with_ma = kline_with_ma_full[-count:] if len(kline_with_ma_full) > count else kline_with_ma_full
@@ -93,13 +100,17 @@ class ChartDataAssembler:
             }
 
             # 3. 检测市场事件
-            logger.info("步骤3: 检测市场事件...")
             price_data_requested = self._slice_price_data(price_data_for_calculation, -count, None)
+            t3a = time.perf_counter()
             events = self._detect_events(price_data_requested)
+            t4 = time.perf_counter()
+            logger.info(f"[计时] 步骤3-市场事件: {(t4-t3a)*1000:.0f}ms")
 
             # 4. 计算筹码分布
-            logger.info("步骤4: 计算筹码分布...")
+            t4a = time.perf_counter()
             chip_distribution = self._calculate_chip_distribution(price_data_requested)
+            t5 = time.perf_counter()
+            logger.info(f"[计时] 步骤4-筹码分布: {(t5-t4a)*1000:.0f}ms")
 
             # 5. 组装返回
             result = {
@@ -113,6 +124,8 @@ class ChartDataAssembler:
                 f"图表数据组装完成: kline={len(kline_with_ma)} 条, "
                 f"indicators={len(indicators_data)} 个, events={len(events)} 个"
             )
+            t_end = time.perf_counter()
+            logger.info(f"[计时] 总计: {(t_end-t_start)*1000:.0f}ms")
             return result
 
         except Exception as e:
@@ -156,9 +169,12 @@ class ChartDataAssembler:
 
         start_date = MarketTimeUtils.to_market_time_by_symbol(start_date, symbol)
 
+        t_fetch = time.perf_counter()
         price_data = self._data_provider.get_index_prices(
             symbol, start_date, end_date, market_local_time, period
         )
+        t_fetch_end = time.perf_counter()
+        logger.info(f"[计时] _fetch_kline_data.get_index_prices: {(t_fetch_end-t_fetch)*1000:.0f}ms (start={start_date}, end={end_date})")
 
         if price_data is None or price_data.count == 0:
             market_now = MarketTimeUtils.get_market_time_now(symbol)
@@ -208,7 +224,7 @@ class ChartDataAssembler:
                 'low': self._safe_float(record.low),
                 'close': self._safe_float(record.close),
                 'volume': self._safe_float(record.volume),
-                'turnover_rate': self._safe_float(record.turnover_rate) if record.turnover_rate is not None else None,
+                'turnover_rate': self._safe_float(getattr(record, 'turnover_rate', None)) if getattr(record, 'turnover_rate', None) is not None else None,
                 'ma5': self._safe_float(ma5.iloc[i]),
                 'ma10': self._safe_float(ma10.iloc[i]),
                 'ma20': self._safe_float(ma20.iloc[i]),

@@ -14,14 +14,16 @@ export type KlineBar = KlineData;
 
 export interface OverlaySeriesDef {
   name: string;
-  type: 'line' | 'bar';
-  data: (number | string)[];
+  type: 'line' | 'bar' | 'scatter';
+  data: (number | string | (string | number)[] | { value: (string | number)[]; symbol?: string; symbolRotate?: number; symbolSize?: number; itemStyle?: { color: string } })[];
   xAxisIndex: 0 | 1;
   yAxisIndex: 0 | 1;
   animation: false;
   lineStyle?: { color: string; type?: 'solid' | 'dashed'; width?: number; opacity?: number };
   itemStyle?: { color: string };
   areaStyle?: { color: string; opacity?: number };
+  symbol?: string;
+  symbolSize?: number;
 }
 
 export interface CachedOverlay {
@@ -191,6 +193,207 @@ export function calcRSI(data: KlineBar[], period: number): (number | string)[] {
   return result;
 }
 
+// ============ 买卖信号计算 ============
+// 与后端 src/services/backtest/strategies/*.py 逻辑完全一致
+
+export interface SignalMarker {
+  date: string;
+  action: 'buy' | 'sell';
+  price: number;
+  reason: string;
+}
+
+/** 双均线策略信号：金叉买入 / 死叉卖出 */
+export function calcDualMASignals(
+  klineData: KlineBar[],
+  shortPeriod: number,
+  longPeriod: number,
+): SignalMarker[] {
+  const signals: SignalMarker[] = [];
+  const maShort = calcMA(klineData, shortPeriod);
+  const maLong = calcMA(klineData, longPeriod);
+
+  for (let i = 1; i < klineData.length; i++) {
+    const prevShort = maShort[i - 1];
+    const prevLong = maLong[i - 1];
+    const currShort = maShort[i];
+    const currLong = maLong[i];
+
+    if (typeof prevShort !== 'number' || typeof prevLong !== 'number' ||
+        typeof currShort !== 'number' || typeof currLong !== 'number') continue;
+
+    // 金叉：前一日短期 <= 长期，当日短期 > 长期
+    if (prevShort <= prevLong && currShort > currLong) {
+      signals.push({
+        date: klineData[i].date,
+        action: 'buy',
+        price: klineData[i].low,
+        reason: `金叉：短期均线(${shortPeriod}日)上穿长期均线(${longPeriod}日)`,
+      });
+    }
+    // 死叉：前一日短期 >= 长期，当日短期 < 长期
+    else if (prevShort >= prevLong && currShort < currLong) {
+      signals.push({
+        date: klineData[i].date,
+        action: 'sell',
+        price: klineData[i].high,
+        reason: `死叉：短期均线(${shortPeriod}日)下穿长期均线(${longPeriod}日)`,
+      });
+    }
+  }
+  return signals;
+}
+
+/** MACD 策略信号：DIF/DEA 金叉死叉 */
+export function calcMACDSignals(
+  klineData: KlineBar[],
+  fast: number,
+  slow: number,
+  signal: number,
+): SignalMarker[] {
+  const signals: SignalMarker[] = [];
+  const emaFast = calcEMA(klineData, fast);
+  const emaSlow = calcEMA(klineData, slow);
+
+  // DIF = EMA_fast - EMA_slow
+  const dif: (number | string)[] = [];
+  for (let i = 0; i < klineData.length; i++) {
+    if (typeof emaFast[i] === 'number' && typeof emaSlow[i] === 'number') {
+      dif.push(+((emaFast[i] as number) - (emaSlow[i] as number)).toFixed(4));
+    } else {
+      dif.push('-');
+    }
+  }
+
+  // DEA = EMA of DIF
+  const deaK = 2 / (signal + 1);
+  const dea: (number | string)[] = [];
+  let deaValue = 0;
+  let firstDiff = false;
+  for (let i = 0; i < dif.length; i++) {
+    if (typeof dif[i] !== 'number') {
+      dea.push('-');
+    } else if (!firstDiff) {
+      deaValue = dif[i] as number;
+      firstDiff = true;
+      dea.push(+deaValue.toFixed(4));
+    } else {
+      deaValue = (dif[i] as number) * deaK + deaValue * (1 - deaK);
+      dea.push(+deaValue.toFixed(4));
+    }
+  }
+
+  for (let i = 1; i < klineData.length; i++) {
+    const prevDiff = dif[i - 1];
+    const prevDea = dea[i - 1];
+    const currDiff = dif[i];
+    const currDea = dea[i];
+
+    if (typeof prevDiff !== 'number' || typeof prevDea !== 'number' ||
+        typeof currDiff !== 'number' || typeof currDea !== 'number') continue;
+
+    // 金叉：前一日 DIF <= DEA，当日 DIF > DEA
+    if (prevDiff <= prevDea && currDiff > currDea) {
+      signals.push({
+        date: klineData[i].date,
+        action: 'buy',
+        price: klineData[i].low,
+        reason: `金叉：DIF(${currDiff.toFixed(4)})上穿DEA(${currDea.toFixed(4)})`,
+      });
+    }
+    // 死叉：前一日 DIF >= DEA，当日 DIF < DEA
+    else if (prevDiff >= prevDea && currDiff < currDea) {
+      signals.push({
+        date: klineData[i].date,
+        action: 'sell',
+        price: klineData[i].high,
+        reason: `死叉：DIF(${currDiff.toFixed(4)})下穿DEA(${currDea.toFixed(4)})`,
+      });
+    }
+  }
+  return signals;
+}
+
+/** RSI 策略信号：超卖回升买入 / 超买回落卖出 */
+export function calcRSISignals(
+  klineData: KlineBar[],
+  period: number,
+  oversold: number,
+  overbought: number,
+): SignalMarker[] {
+  const signals: SignalMarker[] = [];
+  const rsi = calcRSI(klineData, period);
+
+  for (let i = 1; i < klineData.length; i++) {
+    const prevRsi = rsi[i - 1];
+    const currRsi = rsi[i];
+
+    if (typeof prevRsi !== 'number' || typeof currRsi !== 'number') continue;
+
+    // 从超卖区回升 → buy
+    if (prevRsi <= oversold && currRsi > oversold) {
+      signals.push({
+        date: klineData[i].date,
+        action: 'buy',
+        price: klineData[i].low,
+        reason: `RSI从超卖区回升 (${prevRsi.toFixed(1)} → ${currRsi.toFixed(1)})`,
+      });
+    }
+    // 从超买区回落 → sell
+    else if (prevRsi >= overbought && currRsi < overbought) {
+      signals.push({
+        date: klineData[i].date,
+        action: 'sell',
+        price: klineData[i].high,
+        reason: `RSI从超买区回落 (${prevRsi.toFixed(1)} → ${currRsi.toFixed(1)})`,
+      });
+    }
+  }
+  return signals;
+}
+
+/** 布林带策略信号：价格触及上/下轨 */
+export function calcBollingerSignals(
+  klineData: KlineBar[],
+  period: number,
+  stdDev: number,
+): SignalMarker[] {
+  const signals: SignalMarker[] = [];
+  const { upper, lower } = calcBollinger(klineData, period, stdDev);
+
+  for (let i = 1; i < klineData.length; i++) {
+    const prevClose = klineData[i - 1].close;
+    const currClose = klineData[i].close;
+    const prevUpper = upper[i - 1];
+    const currUpper = upper[i];
+    const prevLower = lower[i - 1];
+    const currLower = lower[i];
+
+    if (typeof prevUpper !== 'number' || typeof currUpper !== 'number' ||
+        typeof prevLower !== 'number' || typeof currLower !== 'number') continue;
+
+    // 上穿上轨 → sell（价格从下方向上穿到上轨之上）
+    if (prevClose <= prevUpper && currClose > currUpper) {
+      signals.push({
+        date: klineData[i].date,
+        action: 'sell',
+        price: klineData[i].high,
+        reason: `价格触及上轨 (收盘${currClose.toFixed(2)} > 上轨${currUpper.toFixed(2)})`,
+      });
+    }
+    // 下穿下轨 → buy（价格从上方向下穿到下轨之下）
+    else if (prevClose >= prevLower && currClose < currLower) {
+      signals.push({
+        date: klineData[i].date,
+        action: 'buy',
+        price: klineData[i].low,
+        reason: `价格触及下轨 (收盘${currClose.toFixed(2)} < 下轨${currLower.toFixed(2)})`,
+      });
+    }
+  }
+  return signals;
+}
+
 // ============ 参数哈希 ============
 
 export function hashParams(params: Record<string, number | boolean>): string {
@@ -216,10 +419,11 @@ export function buildOverlaySeriesForGroup(
 
   switch (strategy.id) {
     case 'dual_ma': {
-      const short = group.params.short_period as number;
-      const long = group.params.long_period as number;
+      const short = group.params.shortPeriod as number;
+      const long = group.params.longPeriod as number;
       const maShort = calcMA(klineData, short);
       const maLong = calcMA(klineData, long);
+      const signals = calcDualMASignals(klineData, short, long);
       return [
         {
           name: `${prefix}_MA(${short})`,
@@ -239,13 +443,45 @@ export function buildOverlaySeriesForGroup(
           animation: false,
           lineStyle: { color, type: 'dashed', width: 1.5 },
         },
+        {
+          name: `${prefix}_BUY`,
+          type: 'scatter',
+          data: signals.filter((s) => s.action === 'buy').map((s) => ({
+            value: [s.date, s.price],
+            symbol: 'triangle',
+            symbolSize: 14,
+            itemStyle: { color: '#22c55e' },
+          })),
+          xAxisIndex: 0,
+          yAxisIndex: 0,
+          animation: false,
+          symbol: 'triangle',
+          symbolSize: 14,
+        },
+        {
+          name: `${prefix}_SELL`,
+          type: 'scatter',
+          data: signals.filter((s) => s.action === 'sell').map((s) => ({
+            value: [s.date, s.price],
+            symbol: 'triangle',
+            symbolRotate: 180,
+            symbolSize: 14,
+            itemStyle: { color: '#ef4444' },
+          })),
+          xAxisIndex: 0,
+          yAxisIndex: 0,
+          animation: false,
+          symbol: 'triangle',
+          symbolSize: 14,
+        },
       ];
     }
 
     case 'bollinger': {
       const period = group.params.period as number;
-      const stdDev = group.params.std_dev as number;
+      const stdDev = group.params.stdDev as number;
       const { upper, middle, lower } = calcBollinger(klineData, period, stdDev);
+      const signals = calcBollingerSignals(klineData, period, stdDev);
       return [
         {
           name: `${prefix}_Upper(${period},${stdDev})`,
@@ -275,6 +511,37 @@ export function buildOverlaySeriesForGroup(
           lineStyle: { color, type: 'solid', width: 1 },
           areaStyle: { color, opacity: 0.08 },
         },
+        {
+          name: `${prefix}_BUY`,
+          type: 'scatter',
+          data: signals.filter((s) => s.action === 'buy').map((s) => ({
+            value: [s.date, s.price],
+            symbol: 'triangle',
+            symbolSize: 14,
+            itemStyle: { color: '#22c55e' },
+          })),
+          xAxisIndex: 0,
+          yAxisIndex: 0,
+          animation: false,
+          symbol: 'triangle',
+          symbolSize: 14,
+        },
+        {
+          name: `${prefix}_SELL`,
+          type: 'scatter',
+          data: signals.filter((s) => s.action === 'sell').map((s) => ({
+            value: [s.date, s.price],
+            symbol: 'triangle',
+            symbolRotate: 180,
+            symbolSize: 14,
+            itemStyle: { color: '#ef4444' },
+          })),
+          xAxisIndex: 0,
+          yAxisIndex: 0,
+          animation: false,
+          symbol: 'triangle',
+          symbolSize: 14,
+        },
       ];
     }
 
@@ -283,6 +550,7 @@ export function buildOverlaySeriesForGroup(
       const slow = group.params.slow as number;
       const signal = group.params.signal as number;
       const { diff, dea, histogram } = calcMACD(klineData, fast, slow, signal);
+      const signals = calcMACDSignals(klineData, fast, slow, signal);
       return [
         {
           name: `${prefix}_DIFF(${fast},${slow})`,
@@ -311,14 +579,48 @@ export function buildOverlaySeriesForGroup(
           animation: false,
           itemStyle: { color },
         },
+        {
+          name: `${prefix}_BUY`,
+          type: 'scatter',
+          data: signals.filter((s) => s.action === 'buy').map((s) => ({
+            value: [s.date, s.price],
+            symbol: 'triangle',
+            symbolSize: 14,
+            itemStyle: { color: '#22c55e' },
+          })),
+          xAxisIndex: 0,
+          yAxisIndex: 0,
+          animation: false,
+          symbol: 'triangle',
+          symbolSize: 14,
+        },
+        {
+          name: `${prefix}_SELL`,
+          type: 'scatter',
+          data: signals.filter((s) => s.action === 'sell').map((s) => ({
+            value: [s.date, s.price],
+            symbol: 'triangle',
+            symbolRotate: 180,
+            symbolSize: 14,
+            itemStyle: { color: '#ef4444' },
+          })),
+          xAxisIndex: 0,
+          yAxisIndex: 0,
+          animation: false,
+          symbol: 'triangle',
+          symbolSize: 14,
+        },
       ];
     }
 
     case 'rsi': {
       const period = group.params.period as number;
+      const oversold = (group.params.oversold as number) ?? 30;
+      const overbought = (group.params.overbought as number) ?? 70;
       const rsi = calcRSI(klineData, period);
       const ref70 = new Array(klineData.length).fill(70);
       const ref30 = new Array(klineData.length).fill(30);
+      const signals = calcRSISignals(klineData, period, oversold, overbought);
       return [
         {
           name: `${prefix}_RSI(${period})`,
@@ -346,6 +648,37 @@ export function buildOverlaySeriesForGroup(
           yAxisIndex: 1,
           animation: false,
           lineStyle: { color: '#22c55e', type: 'dashed', width: 0.5, opacity: 0.5 },
+        },
+        {
+          name: `${prefix}_BUY`,
+          type: 'scatter',
+          data: signals.filter((s) => s.action === 'buy').map((s) => ({
+            value: [s.date, s.price],
+            symbol: 'triangle',
+            symbolSize: 14,
+            itemStyle: { color: '#22c55e' },
+          })),
+          xAxisIndex: 0,
+          yAxisIndex: 0,
+          animation: false,
+          symbol: 'triangle',
+          symbolSize: 14,
+        },
+        {
+          name: `${prefix}_SELL`,
+          type: 'scatter',
+          data: signals.filter((s) => s.action === 'sell').map((s) => ({
+            value: [s.date, s.price],
+            symbol: 'triangle',
+            symbolRotate: 180,
+            symbolSize: 14,
+            itemStyle: { color: '#ef4444' },
+          })),
+          xAxisIndex: 0,
+          yAxisIndex: 0,
+          animation: false,
+          symbol: 'triangle',
+          symbolSize: 14,
         },
       ];
     }

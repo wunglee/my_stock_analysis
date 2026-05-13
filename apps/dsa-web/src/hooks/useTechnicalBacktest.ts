@@ -3,6 +3,8 @@ import { backtestApi } from '../api/backtest';
 import { getParsedApiError } from '../api/error';
 import type { ParsedApiError } from '../api/error';
 import type { StrategyConfig, StrategyParameter, ParamGroup, ParamGroupResult, BacktestTemplateItem } from '../types/technicalBacktest';
+import { useSessionState, isNonEmptyArray } from './useSessionState';
+import { useTechnicalTemplates } from './useTechnicalTemplates';
 
 /** 从策略参数定义构建默认参数值映射 */
 function buildDefaultParams(parameters: StrategyParameter[]): Record<string, number | boolean> {
@@ -11,61 +13,35 @@ function buildDefaultParams(parameters: StrategyParameter[]): Record<string, num
   return params;
 }
 
-// ============ sessionStorage 持久化工具 ============
+/** 从股票代码输入中提取标准化代码（去掉市场后缀，取第一个） */
+function extractNormalizedStockCode(codesInput: string): string | null {
+  const tokens = codesInput.split(/[,，\s]+/).filter(Boolean);
+  if (tokens.length === 0) return null;
+  return tokens[0].trim().replace(/\.(SH|SZ|HK|US)$/i, '');
+}
+
+// ============ sessionStorage Keys ============
 
 const STORAGE_KEY_RESULTS = 'technical_backtest_results';
 const STORAGE_KEY_PARAM_GROUPS = 'technical_backtest_param_groups';
 const STORAGE_KEY_STRATEGY_ID = 'technical_backtest_strategy_id';
-
-function saveState<T>(key: string, data: T): void {
-  try {
-    sessionStorage.setItem(key, JSON.stringify(data));
-  } catch {
-    // 静默降级：quota 满或隐私模式下不影响功能
-  }
-}
-
-function loadState<T>(key: string, validate?: (v: unknown) => boolean): T | null {
-  try {
-    const raw = sessionStorage.getItem(key);
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (validate && !validate(parsed)) return null;
-    return parsed as T;
-  } catch {
-    return null;
-  }
-}
-
-/** 运行时校验：确保值为非空数组 */
-function isNonEmptyArray(v: unknown): v is unknown[] {
-  return Array.isArray(v) && v.length > 0;
-}
-
-function clearState(key: string): void {
-  try {
-    sessionStorage.removeItem(key);
-  } catch {
-    // 静默降级
-  }
-}
 
 interface UseTechnicalBacktestOptions {
   technicalCodes: string;
   technicalStartDate: string;
   technicalEndDate: string;
   technicalEvalDays: string;
+  klineLoaded?: boolean;
+  klineLoadId?: number;
 }
 
 interface UseTechnicalBacktestReturn {
-  // 策略
   strategies: StrategyConfig[];
   selectedStrategyId: string;
   setSelectedStrategyId: (id: string) => void;
   selectedStrategy: StrategyConfig | undefined;
   strategyError: ParsedApiError | null;
 
-  // 参数组
   paramGroups: ParamGroup[];
   invalidGroupIds: Set<string>;
   addParamGroup: () => void;
@@ -76,14 +52,12 @@ interface UseTechnicalBacktestReturn {
   toggleGroupEnabled: (groupId: string) => void;
   setInvalidGroupIds: (ids: Set<string>) => void;
 
-  // 回测结果
   batchResults: ParamGroupResult[] | null;
   isBatchRunning: boolean;
   technicalError: ParsedApiError | null;
   setTechnicalError: (err: ParsedApiError | null) => void;
   handleRunBatch: () => Promise<void>;
 
-  // 参数组模板
   templates: BacktestTemplateItem[];
   isLoadingTemplates: boolean;
   loadTemplates: () => Promise<void>;
@@ -95,15 +69,18 @@ interface UseTechnicalBacktestReturn {
 export function useTechnicalBacktest(
   options: UseTechnicalBacktestOptions,
 ): UseTechnicalBacktestReturn {
-  const { technicalCodes, technicalStartDate, technicalEndDate, technicalEvalDays } = options;
+  const { technicalCodes, technicalStartDate, technicalEndDate, technicalEvalDays, klineLoaded, klineLoadId } = options;
 
-  // 策略列表
+  // 策略列表（服务端数据，不持久化到 sessionStorage）
   const [strategies, setStrategies] = useState<StrategyConfig[]>([]);
-  const [selectedStrategyId, setSelectedStrategyId] = useState('');
+  const [selectedStrategyId, setSelectedStrategyId] = useSessionState<string>(STORAGE_KEY_STRATEGY_ID, { defaultValue: '' });
   const [strategyError, setStrategyError] = useState<ParsedApiError | null>(null);
 
-  // 参数组
-  const [paramGroups, setParamGroups] = useState<ParamGroup[]>([]);
+  // 参数组（sessionStorage 持久化）
+  const [paramGroups, setParamGroups] = useSessionState<ParamGroup[]>(STORAGE_KEY_PARAM_GROUPS, {
+    defaultValue: [],
+    validate: isNonEmptyArray,
+  });
   const [invalidGroupIds, setInvalidGroupIds] = useState<Set<string>>(new Set());
 
   // 回测结果
@@ -111,20 +88,37 @@ export function useTechnicalBacktest(
   const [isBatchRunning, setIsBatchRunning] = useState(false);
   const [technicalError, setTechnicalError] = useState<ParsedApiError | null>(null);
 
-  // 模板
-  const [templates, setTemplates] = useState<BacktestTemplateItem[]>([]);
-  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  // 模板 CRUD（独立 Hook）
+  const {
+    templates,
+    isLoadingTemplates,
+    loadTemplates,
+    saveAsTemplate,
+    deleteTemplate,
+    loadTemplate,
+  } = useTechnicalTemplates(
+    { selectedStrategyId, paramGroups },
+    setParamGroups,
+    setBatchResults,
+    setTechnicalError,
+  );
 
-  // 页面刷新后恢复 sessionStorage 中的结果和参数
+  // 自动持久化跟踪
+  const paramsSourceRef = useRef<'user' | 'backend'>('user');
+  const lastLoadedKeyRef = useRef<string>('');
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 用 ref 跟踪 technicalCodes 最新值，避免 effect 对每次按键重跑
+  const technicalCodesRef = useRef(technicalCodes);
+  technicalCodesRef.current = technicalCodes;
+
+  // Bug 修复：没有加载 K 线时清除回测结果（结果必须与 K 线配对）
   useEffect(() => {
-    const savedResults = loadState<ParamGroupResult[]>(STORAGE_KEY_RESULTS, isNonEmptyArray);
-    const savedParamGroups = loadState<ParamGroup[]>(STORAGE_KEY_PARAM_GROUPS, isNonEmptyArray);
-    const savedStrategyId = loadState<string>(STORAGE_KEY_STRATEGY_ID);
-
-    if (savedResults) setBatchResults(savedResults);
-    if (savedParamGroups && savedParamGroups.length > 0) setParamGroups(savedParamGroups);
-    if (savedStrategyId) setSelectedStrategyId(savedStrategyId);
-  }, []);
+    if (!klineLoaded) {
+      setBatchResults(null);
+      try { sessionStorage.removeItem(STORAGE_KEY_RESULTS); } catch { /* 静默降级 */ }
+    }
+  }, [klineLoaded]);
 
   // 加载策略列表（仅在挂载时执行）
   useEffect(() => {
@@ -142,21 +136,9 @@ export function useTechnicalBacktest(
   // 回测结果变化时持久化到 sessionStorage
   useEffect(() => {
     if (batchResults) {
-      saveState(STORAGE_KEY_RESULTS, batchResults);
+      try { sessionStorage.setItem(STORAGE_KEY_RESULTS, JSON.stringify(batchResults)); } catch { /* 静默降级 */ }
     }
   }, [batchResults]);
-
-  // 参数组变化时持久化到 sessionStorage
-  useEffect(() => {
-    saveState(STORAGE_KEY_PARAM_GROUPS, paramGroups);
-  }, [paramGroups]);
-
-  // 策略切换时持久化策略 ID
-  useEffect(() => {
-    if (selectedStrategyId) {
-      saveState(STORAGE_KEY_STRATEGY_ID, selectedStrategyId);
-    }
-  }, [selectedStrategyId]);
 
   // 跟踪前一个策略 ID，区分"初始加载"和"用户主动切换策略"
   const prevStrategyId = useRef<string>('');
@@ -171,6 +153,7 @@ export function useTechnicalBacktest(
     prevStrategyId.current = selectedStrategyId;
 
     if (isUserSwitch) {
+      paramsSourceRef.current = 'user';
       setParamGroups([
         {
           id: crypto.randomUUID(),
@@ -180,9 +163,9 @@ export function useTechnicalBacktest(
         },
       ]);
       setBatchResults(null);
-      clearState(STORAGE_KEY_RESULTS);
+      try { sessionStorage.removeItem(STORAGE_KEY_RESULTS); } catch { /* 静默降级 */ }
     } else if (paramGroups.length === 0) {
-      // 首次加载且无 sessionStorage 恢复数据时，初始化默认参数组
+      paramsSourceRef.current = 'user';
       setParamGroups([
         {
           id: crypto.randomUUID(),
@@ -191,8 +174,7 @@ export function useTechnicalBacktest(
           params: buildDefaultParams(strategy.parameters),
         },
       ]);
-    } else {
-      // sessionStorage 恢复了参数组，校验参数键是否与当前策略一致
+    } else if (paramsSourceRef.current !== 'backend') {
       const strategyKeys = new Set(strategy.parameters.map((p) => p.key));
       const hasMismatch = paramGroups.some((g) => {
         const keys = Object.keys(g.params);
@@ -211,15 +193,71 @@ export function useTechnicalBacktest(
     }
   }, [selectedStrategyId, strategies]);
 
-  // 策略切换时自动加载模板列表
+  // ============ 自动加载回测会话 ============
+
   useEffect(() => {
-    if (!selectedStrategyId) return;
-    setIsLoadingTemplates(true);
-    backtestApi.listTemplates(selectedStrategyId)
-      .then(setTemplates)
-      .catch(() => setTemplates([]))
-      .finally(() => setIsLoadingTemplates(false));
-  }, [selectedStrategyId]);
+    if (!klineLoaded || !selectedStrategyId) return;
+    const stockCode = extractNormalizedStockCode(technicalCodesRef.current);
+    if (!stockCode) return;
+
+    const loadKey = `${stockCode}:${selectedStrategyId}`;
+    if (loadKey === lastLoadedKeyRef.current) return;
+    lastLoadedKeyRef.current = loadKey;
+
+    backtestApi.loadSession(stockCode, selectedStrategyId)
+      .then((session) => {
+        if (session) {
+          paramsSourceRef.current = 'backend';
+          if (session.paramGroups && session.paramGroups.length > 0) {
+            setParamGroups(session.paramGroups);
+          }
+          if (session.batchResults) {
+            const validResults = session.batchResults.filter((r) => r?.group?.id);
+            if (validResults.length > 0) setBatchResults(validResults);
+          }
+        }
+      })
+      .catch(() => {
+        // 网络错误时降级到 sessionStorage，不覆盖当前状态
+      });
+  }, [klineLoaded, klineLoadId, selectedStrategyId]);
+
+  // ============ 自动保存回测会话 ============
+
+  // 参数组变化时 debounced 保存（只保存参数，不覆盖已有结果）
+  useEffect(() => {
+    if (!klineLoaded) return;
+    const stockCode = extractNormalizedStockCode(technicalCodesRef.current);
+    if (!stockCode || !selectedStrategyId) return;
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      backtestApi.saveSession({
+        stockCode,
+        strategyId: selectedStrategyId,
+        paramGroups,
+      }).catch(() => { /* 静默降级 */ });
+    }, 2000);
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [paramGroups]);
+
+  // 回测结果到达时立即保存
+  useEffect(() => {
+    if (!klineLoaded || !batchResults) return;
+    const stockCode = extractNormalizedStockCode(technicalCodesRef.current);
+    if (!stockCode || !selectedStrategyId) return;
+
+    backtestApi.saveSession({
+      stockCode,
+      strategyId: selectedStrategyId,
+      paramGroups,
+      batchResults,
+    }).catch(() => { /* 静默降级 */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batchResults]);
 
   const selectedStrategy = useMemo(
     () => strategies.find((s) => s.id === selectedStrategyId),
@@ -238,11 +276,11 @@ export function useTechnicalBacktest(
         params: buildDefaultParams(selectedStrategy.parameters),
       },
     ]);
-  }, [selectedStrategy, paramGroups.length]);
+  }, [selectedStrategy, paramGroups.length, setParamGroups]);
 
   const removeParamGroup = useCallback((id: string) => {
     setParamGroups((prev) => prev.filter((g) => g.id !== id));
-  }, []);
+  }, [setParamGroups]);
 
   const duplicateParamGroup = useCallback((id: string) => {
     if (!selectedStrategy || paramGroups.length >= 6) return;
@@ -257,7 +295,7 @@ export function useTechnicalBacktest(
         params: { ...group.params },
       },
     ]);
-  }, [selectedStrategy, paramGroups]);
+  }, [selectedStrategy, paramGroups, setParamGroups]);
 
   const updateParamValue = useCallback((
     groupId: string,
@@ -269,13 +307,13 @@ export function useTechnicalBacktest(
         g.id === groupId ? { ...g, params: { ...g.params, [key]: value } } : g,
       ),
     );
-  }, []);
+  }, [setParamGroups]);
 
   const updateGroupName = useCallback((groupId: string, name: string) => {
     setParamGroups((prev) =>
       prev.map((g) => (g.id === groupId ? { ...g, name } : g)),
     );
-  }, []);
+  }, [setParamGroups]);
 
   const toggleGroupEnabled = useCallback((groupId: string) => {
     setParamGroups((prev) =>
@@ -283,52 +321,7 @@ export function useTechnicalBacktest(
         g.id === groupId ? { ...g, enabled: !g.enabled } : g,
       ),
     );
-  }, []);
-
-  const loadTemplates = useCallback(async () => {
-    if (!selectedStrategyId) return;
-    setIsLoadingTemplates(true);
-    try {
-      const items = await backtestApi.listTemplates(selectedStrategyId);
-      setTemplates(items);
-    } catch {
-      setTemplates([]);
-    } finally {
-      setIsLoadingTemplates(false);
-    }
-  }, [selectedStrategyId]);
-
-  const saveAsTemplate = useCallback(async (name: string) => {
-    if (!selectedStrategyId || !name.trim()) return;
-    try {
-      await backtestApi.saveTemplate({
-        strategyId: selectedStrategyId,
-        name: name.trim(),
-        params: paramGroups,
-      });
-      await loadTemplates();
-    } catch (err) {
-      setTechnicalError(getParsedApiError(err));
-    }
-  }, [selectedStrategyId, paramGroups, loadTemplates]);
-
-  const deleteTemplate = useCallback(async (id: number) => {
-    const previous = templates;
-    setTemplates((prev) => prev.filter((t) => t.id !== id));
-    try {
-      await backtestApi.deleteTemplate(id);
-    } catch (err) {
-      setTemplates(previous); // 回滚乐观删除
-      setTechnicalError(getParsedApiError(err));
-    }
-  }, [templates]);
-
-  const loadTemplate = useCallback((template: BacktestTemplateItem) => {
-    if (template.params.length === 0) return;
-    setParamGroups(template.params);
-    setBatchResults(null);
-    clearState(STORAGE_KEY_RESULTS);
-  }, []);
+  }, [setParamGroups]);
 
   const handleRunBatch = useCallback(async () => {
     const codes = technicalCodes

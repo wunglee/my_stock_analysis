@@ -34,6 +34,9 @@ class _FakeCalendar:
         earlier = [d for d in self._days if d < date]
         return max(earlier) if earlier else date
 
+    def get_effective_trading_date(self, symbol: str) -> pd.Timestamp:
+        return max(self._days)
+
 
 Base = declarative_base()
 

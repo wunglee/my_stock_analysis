@@ -420,6 +420,9 @@ class AkshareFetcher(BaseFetcher):
             api_elapsed = _time.time() - api_start
 
             if df is not None and not df.empty:
+                # ak.stock_zh_a_hist 返回的成交量单位是手（100股/手），统一转为股
+                if '成交量' in df.columns:
+                    df['成交量'] = df['成交量'] * 100
                 logger.info(f"[API返回] ak.stock_zh_a_hist 成功: {len(df)} 行, 耗时 {api_elapsed:.2f}s")
                 return df
             else:
@@ -499,8 +502,11 @@ class AkshareFetcher(BaseFetcher):
             )
 
             # 标准化腾讯数据列名
-            # 腾讯返回：date, open, close, high, low, volume, amount
+            # 腾讯返回：date, open, close, high, low, volume(手), amount
             if df is not None and not df.empty:
+                # ak.stock_zh_a_hist_tx 返回的成交量单位是手，统一转为股
+                if 'volume' in df.columns:
+                    df['volume'] = df['volume'] * 100
                 rename_map = {
                     'date': '日期', 'open': '开盘', 'high': '最高',
                     'low': '最低', 'close': '收盘', 'volume': '成交量',

@@ -46,6 +46,9 @@ class TestTradingCalendarProtocol:
             def prev_trading_day(self, date: pd.Timestamp) -> pd.Timestamp:
                 return date
 
+            def get_effective_trading_date(self, symbol: str) -> pd.Timestamp:
+                return date
+
         assert isinstance(FakeCalendar(), ITradingCalendar)
 
     def test_missing_method_fails_protocol(self):

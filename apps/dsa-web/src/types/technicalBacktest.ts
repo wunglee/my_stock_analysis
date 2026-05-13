@@ -120,6 +120,18 @@ export interface BacktestTemplateItem {
   updatedAt: string;
 }
 
+// ============ P4: 自动持久化会话 ============
+
+export interface BacktestSession {
+  id: number;
+  stockCode: string;
+  strategyId: string;
+  paramGroups: ParamGroup[];
+  batchResults: ParamGroupResult[] | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ============ 现有类型扩展 ============
 
 export interface TechnicalBacktestStockResult {

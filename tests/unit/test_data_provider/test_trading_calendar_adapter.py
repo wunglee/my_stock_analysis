@@ -72,8 +72,8 @@ class TestXCalTradingCalendar:
 class TestTradingCalendarEdgeCases:
     """边界条件与异常处理"""
 
-    def test_fail_open_when_xcals_unavailable(self, monkeypatch):
-        """exchange-calendars 不可用时 fail-open，全部返回 True"""
+    def test_raise_when_xcals_unavailable(self, monkeypatch):
+        """exchange-calendars 不可用时抛 RuntimeError，不允许静默 fail-open"""
         monkeypatch.setattr(
             "src.data_provider.trading_calendar_adapter._XCALS_AVAILABLE", False
         )
@@ -81,8 +81,8 @@ class TestTradingCalendarEdgeCases:
 
         cal = XCalTradingCalendar(market="cn")
         day = pd.Timestamp("2024-10-01", tz="Asia/Shanghai")
-        # fail-open: 休市日也返回 True
-        assert cal.is_trading_day(day) is True
+        with pytest.raises(RuntimeError, match="无法加载交易日历"):
+            cal.is_trading_day(day)
 
     def test_hk_market(self):
         """港股日历应识别港股休市（如台风假）"""

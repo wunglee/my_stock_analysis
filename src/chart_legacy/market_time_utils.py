@@ -22,20 +22,10 @@ _MARKET_TIMEZONES = {
 }
 
 
-def _infer_market_from_symbol(symbol: str) -> str:
-    """从股票代码推断市场"""
-    if not symbol:
-        return 'CN'
-    s = symbol.strip().upper()
-    if s.endswith('.US') or (len(s) <= 5 and s.isalpha()):
-        return 'US'
-    if s.endswith('.HK') or (s.startswith('HK') and s[2:].isdigit()):
-        return 'HK'
-    if s.startswith('6') or s.startswith('0') or s.startswith('3') or s.startswith('8') or s.startswith('9'):
-        return 'CN'
-    if s.startswith('1') or s.startswith('2') or s.startswith('5'):
-        return 'CN'  # 指数/基金
-    return 'CN'
+def _detect_market(symbol: str) -> str:
+    """从股票代码推断市场（返回大写代码，兼容 _MARKET_TIMEZONES）"""
+    from src.market_context import detect_market
+    return detect_market(symbol).upper()
 
 
 class MarketTimeUtils:
@@ -43,7 +33,7 @@ class MarketTimeUtils:
 
     @staticmethod
     def get_market_timezone_from_symbol(symbol: str):
-        market = _infer_market_from_symbol(symbol)
+        market = _detect_market(symbol)
         tz_str = _MARKET_TIMEZONES.get(market, 'UTC')
         return pd.Timestamp.now(tz=tz_str).tz
 
@@ -55,7 +45,7 @@ class MarketTimeUtils:
     @staticmethod
     def get_market_time_now(symbol: str) -> pd.Timestamp:
         """获取指定 symbol 所属市场的当前本地时间（带时区）"""
-        market = _infer_market_from_symbol(symbol)
+        market = _detect_market(symbol)
         tz_str = _MARKET_TIMEZONES.get(market, 'UTC')
         return pd.Timestamp.now(tz=tz_str)
 
@@ -95,7 +85,7 @@ class MarketTimeUtils:
     @staticmethod
     def to_market_time_by_symbol(date_time: pd.Timestamp, symbol: str) -> pd.Timestamp:
         """确保时间戳带有正确的市场时区（通过 symbol 推断）"""
-        market = _infer_market_from_symbol(symbol)
+        market = _detect_market(symbol)
         market_code = MarketCode.parse(market)
         return MarketTimeUtils.to_market_time(date_time, market_code)
 

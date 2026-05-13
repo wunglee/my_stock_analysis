@@ -13,6 +13,7 @@ import type {
   ParamGroup,
   ParamGroupResult,
   BacktestTemplateItem,
+  BacktestSession,
 } from '../types/technicalBacktest';
 // 所有 mock 数据已从后端 API 获取，前端不再维护本地 mock
 // 如需查看旧的前端 mock 实现，参见 git 历史中的 src/api/mock/backtestMock.ts
@@ -158,6 +159,19 @@ export const backtestApi = {
       '/api/v1/backtest/strategies',
     );
     const data = toCamelCase<{ strategies?: StrategyConfig[] }>(response.data);
+    // toCamelCase 只转换对象键名，不转换字符串值。策略参数的 key
+    // 和校验规则的 paramA/paramB 是 snake_case 字符串值（如 "short_period"），
+    // 需手动转为 camelCase 才能与 group.params 的键名匹配。
+    const toCamel = (s: string) => s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+    for (const s of data.strategies || []) {
+      for (const p of s.parameters) {
+        p.key = toCamel(p.key);
+      }
+      for (const r of s.validationRules) {
+        if (r.paramA) r.paramA = toCamel(r.paramA);
+        if (r.paramB) r.paramB = toCamel(r.paramB);
+      }
+    }
     return data.strategies || [];
   },
 
@@ -245,5 +259,58 @@ export const backtestApi = {
    */
   deleteTemplate: async (id: number): Promise<void> => {
     await apiClient.delete(`/api/v1/backtest/technical/templates/${id}`);
+  },
+
+  // ============ P4: 自动持久化会话 ============
+
+  /**
+   * 加载回测会话
+   * GET /api/v1/backtest/technical/session?stock_code=X&strategy_id=Y
+   * 返回 null 表示 404（无会话数据）
+   */
+  loadSession: async (stockCode: string, strategyId: string): Promise<BacktestSession | null> => {
+    try {
+      const response = await apiClient.get<Record<string, unknown>>(
+        '/api/v1/backtest/technical/session',
+        { params: { stock_code: stockCode, strategy_id: strategyId } },
+      );
+      return toCamelCase<BacktestSession>(response.data);
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosErr = err as { response?: { status?: number } };
+        if (axiosErr.response?.status === 404) return null;
+      }
+      throw err;
+    }
+  },
+
+  /**
+   * 保存回测会话 (upsert)
+   * POST /api/v1/backtest/technical/session
+   */
+  saveSession: async (data: {
+    stockCode: string;
+    strategyId: string;
+    paramGroups: ParamGroup[];
+    batchResults?: ParamGroupResult[] | null;
+  }): Promise<BacktestSession> => {
+    const body: Record<string, unknown> = {
+      stock_code: data.stockCode,
+      strategy_id: data.strategyId,
+      param_groups: data.paramGroups.map((g) => ({
+        id: g.id,
+        name: g.name,
+        enabled: g.enabled,
+        params: g.params,
+      })),
+    };
+    if (data.batchResults !== undefined) {
+      body.batch_results = data.batchResults;
+    }
+    const response = await apiClient.post<Record<string, unknown>>(
+      '/api/v1/backtest/technical/session',
+      body,
+    );
+    return toCamelCase<BacktestSession>(response.data);
   },
 };

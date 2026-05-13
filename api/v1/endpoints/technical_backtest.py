@@ -24,6 +24,8 @@ from api.v1.schemas.backtest import (
     TemplateItem,
     TemplateListResponse,
     TemplateSaveRequest,
+    SessionSaveRequest,
+    SessionItem,
 )
 from api.v1.schemas.common import ErrorResponse
 from src.config import get_config
@@ -38,6 +40,7 @@ from src.services.backtest.strategies.registry import get_default_registry
 from src.services.technical_backtest_service import TechnicalBacktestService
 from src.storage import DatabaseManager
 from src.repositories.backtest_template_repo import BacktestTemplateRepository
+from src.repositories.backtest_session_repo import BacktestSessionRepository
 from data_provider.base import DataFetcherManager
 
 logger = logging.getLogger(__name__)
@@ -197,6 +200,12 @@ def _get_template_repo(
     return BacktestTemplateRepository(db_manager)
 
 
+def _get_session_repo(
+    db_manager: DatabaseManager = Depends(get_database_manager),
+) -> BacktestSessionRepository:
+    return BacktestSessionRepository(db_manager)
+
+
 @router.get(
     "/technical/templates",
     response_model=TemplateListResponse,
@@ -283,4 +292,75 @@ def delete_template(
         raise HTTPException(
             status_code=500,
             detail={"error": "internal_error", "message": "删除模板失败"},
+        )
+
+
+# ============ P4: 自动持久化会话端点 ============
+
+@router.get(
+    "/technical/session",
+    response_model=SessionItem,
+    responses={
+        200: {"description": "会话数据"},
+        404: {"description": "未找到会话", "model": ErrorResponse},
+        500: {"description": "服务器错误", "model": ErrorResponse},
+    },
+    summary="加载回测会话",
+    description="根据 stock_code 和 strategy_id 加载自动保存的回测会话",
+)
+def load_session(
+    stock_code: str = Query(..., min_length=1, max_length=16),
+    strategy_id: str = Query(..., min_length=1, max_length=64),
+    _tech_enabled: None = Depends(_require_technical_backtest_enabled),
+    repo: BacktestSessionRepository = Depends(_get_session_repo),
+) -> SessionItem:
+    try:
+        session = repo.get(stock_code, strategy_id)
+        if session is None:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "not_found", "message": "未找到回测会话"},
+            )
+        return SessionItem(**session)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"加载会话失败: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "internal_error", "message": "加载会话失败"},
+        )
+
+
+@router.post(
+    "/technical/session",
+    response_model=SessionItem,
+    status_code=200,
+    responses={
+        200: {"description": "会话已更新"},
+        201: {"description": "会话已创建"},
+        422: {"description": "参数校验失败", "model": ErrorResponse},
+        500: {"description": "服务器错误", "model": ErrorResponse},
+    },
+    summary="保存回测会话",
+    description="自动保存/更新回测会话（按 stock_code + strategy_id upsert）",
+)
+def save_session(
+    request: SessionSaveRequest,
+    _tech_enabled: None = Depends(_require_technical_backtest_enabled),
+    repo: BacktestSessionRepository = Depends(_get_session_repo),
+) -> SessionItem:
+    try:
+        session = repo.upsert(
+            request.stock_code,
+            request.strategy_id,
+            request.param_groups,
+            request.batch_results,
+        )
+        return SessionItem(**session)
+    except Exception as exc:
+        logger.error(f"保存会话失败: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "internal_error", "message": "保存会话失败"},
         )

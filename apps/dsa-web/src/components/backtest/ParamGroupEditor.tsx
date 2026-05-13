@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { Copy, Trash2, Plus, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Copy, Trash2, Plus, Eye, EyeOff, AlertCircle, ChevronDown } from 'lucide-react';
 import type { StrategyConfig, ParamGroup, StrategyParameter } from '../../types/technicalBacktest';
 
 interface Props {
@@ -39,8 +39,8 @@ const ParamInput: React.FC<{
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-secondary-text">{param.name}</span>
-        <span className="text-xs font-mono text-cyan-400">{numValue}</span>
+        <span className="text-[11px] text-secondary-text">{param.name}</span>
+        <span className="text-[11px] font-mono text-cyan-400">{numValue}</span>
       </div>
       <input
         type="range"
@@ -106,105 +106,130 @@ export const ParamGroupEditor: React.FC<Props> = ({
     return ids;
   }, [paramGroups, strategy]);
 
-  // 通知外部校验状态变化
   useEffect(() => {
     onValidationChange?.(invalidIds);
   }, [invalidIds, onValidationChange]);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-text uppercase">参数组配置</span>
-        <span className="text-xs text-muted-text">{paramGroups.length}/6</span>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between px-1">
+        <span className="text-[11px] font-medium text-muted-text uppercase">参数组</span>
+        <span className="text-[10px] text-muted-text">{paramGroups.length}/6</span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {paramGroups.map((group) => {
-          const errors = validateGroup(group, strategy);
-          const hasError = errors.length > 0 && group.enabled;
-          return (
+      {paramGroups.map((group) => {
+        const errors = validateGroup(group, strategy);
+        const hasError = errors.length > 0 && group.enabled;
+        const isExpanded = activeGroupId === group.id;
+
+        return (
           <div
             key={group.id}
-            onClick={() => {
-              if (!group.enabled) return;
-              onSelectGroup(activeGroupId === group.id ? null : group.id);
-            }}
-            className={`rounded-xl border p-3 space-y-3 transition-all cursor-pointer ${
+            className={`rounded-xl border transition-all ${
               hasError
                 ? 'border-danger/40 bg-danger/5'
-                : activeGroupId === group.id
+                : isExpanded
                   ? 'border-cyan-400/60 bg-card/50 ring-1 ring-cyan-400/20'
                   : group.enabled
                     ? 'border-cyan-500/20 bg-card/40 hover:border-cyan-500/40'
                     : 'border-white/5 bg-card/20 opacity-60'
             }`}
           >
-            {/* Group Header */}
-            <div className="flex items-center gap-2">
+            {/* Header */}
+            <div
+              onClick={() => {
+                if (!group.enabled) return;
+                onSelectGroup(isExpanded ? null : group.id);
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-2 cursor-pointer select-none"
+            >
               <button
                 type="button"
-                onClick={() => onToggleEnabled(group.id)}
-                className="text-muted-text hover:text-foreground transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleEnabled(group.id);
+                }}
+                className="text-muted-text hover:text-foreground transition-colors flex-shrink-0"
                 title={group.enabled ? '禁用' : '启用'}
               >
-                {group.enabled ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                {group.enabled ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
               </button>
+
               <input
                 type="text"
                 value={group.name}
                 onChange={(e) => onUpdateName(group.id, e.target.value)}
-                className="flex-1 bg-transparent text-xs font-medium text-foreground outline-none border-b border-transparent focus:border-cyan-500/50 px-1"
+                onClick={(e) => e.stopPropagation()}
+                className="flex-1 min-w-0 bg-transparent text-xs font-medium text-foreground outline-none border-b border-transparent focus:border-cyan-500/50 px-0.5"
               />
+
+              {hasError && (
+                <AlertCircle className="h-3 w-3 text-danger flex-shrink-0" />
+              )}
+
               <button
                 type="button"
-                onClick={() => onDuplicate(group.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate(group.id);
+                }}
                 disabled={paramGroups.length >= 6}
-                className="text-muted-text hover:text-cyan-400 transition-colors disabled:opacity-30"
+                className="text-muted-text hover:text-cyan-400 transition-colors disabled:opacity-30 flex-shrink-0"
                 title="复制"
               >
-                <Copy className="h-3.5 w-3.5" />
+                <Copy className="h-3 w-3" />
               </button>
+
               {paramGroups.length > 1 && (
                 <button
                   type="button"
-                  onClick={() => onRemove(group.id)}
-                  className="text-muted-text hover:text-danger transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(group.id);
+                  }}
+                  className="text-muted-text hover:text-danger transition-colors flex-shrink-0"
                   title="删除"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3 w-3" />
                 </button>
               )}
+
+              <ChevronDown
+                className={`h-3.5 w-3.5 text-muted-text flex-shrink-0 transition-transform duration-200 ${
+                  isExpanded ? 'rotate-180' : ''
+                }`}
+              />
             </div>
 
-            {/* Parameters */}
-            <div className="space-y-2.5">
-              {strategy.parameters.map((param) => (
-                <ParamInput
-                  key={param.key}
-                  param={param}
-                  value={group.params[param.key] ?? param.defaultValue}
-                  onChange={(v) => onUpdateParam(group.id, param.key, v)}
-                />
-              ))}
-            </div>
+            {/* Body — 仅展开时渲染 */}
+            {isExpanded && (
+              <div className="px-3 pb-3 space-y-2.5">
+                {strategy.parameters.map((param) => (
+                  <ParamInput
+                    key={param.key}
+                    param={param}
+                    value={group.params[param.key] ?? param.defaultValue}
+                    onChange={(v) => onUpdateParam(group.id, param.key, v)}
+                  />
+                ))}
 
-            {/* Validation Errors */}
-            {hasError && errors.length > 0 && (
-              <div className="flex items-start gap-1.5 text-[10px] text-danger">
-                <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                <span>{errors.join('；')}</span>
+                {hasError && (
+                  <div className="flex items-start gap-1.5 text-[10px] text-danger">
+                    <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                    <span>{errors.join('；')}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
-          );
-        })}
-      </div>
+        );
+      })}
 
       {paramGroups.length < 6 && (
         <button
           type="button"
           onClick={onAdd}
-          className="w-full rounded-xl border border-dashed border-white/10 bg-card/20 py-2.5 text-xs text-muted-text hover:text-foreground hover:border-cyan-500/30 hover:bg-card/30 transition-all flex items-center justify-center gap-1.5"
+          className="w-full rounded-xl border border-dashed border-white/10 bg-card/20 py-2 text-xs text-muted-text hover:text-foreground hover:border-cyan-500/30 hover:bg-card/30 transition-all flex items-center justify-center gap-1.5"
         >
           <Plus className="h-3.5 w-3.5" />
           添加参数组

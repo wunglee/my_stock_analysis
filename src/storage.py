@@ -2160,6 +2160,37 @@ class BacktestParamTemplate(Base):
         }
 
 
+class BacktestSession(Base):
+    """技术回测自动持久化会话 — 每个 (stock_code, strategy_id) 一条"""
+
+    __tablename__ = "backtest_sessions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    stock_code = Column(String(16), nullable=False, index=True)
+    strategy_id = Column(String(64), nullable=False, index=True)
+    param_groups = Column(Text, nullable=False)  # JSON: ParamGroup[]
+    batch_results = Column(Text, nullable=True)  # JSON: ParamGroupResult[] | null
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "stock_code", "strategy_id", name="uix_session_stock_strategy"
+        ),
+    )
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "stock_code": self.stock_code,
+            "strategy_id": self.strategy_id,
+            "param_groups": json.loads(self.param_groups),
+            "batch_results": json.loads(self.batch_results) if self.batch_results else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 if __name__ == "__main__":
     # 测试代码
     logging.basicConfig(level=logging.DEBUG)

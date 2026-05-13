@@ -21,9 +21,9 @@ from typing import Optional
 from fastapi import APIRouter, Query
 
 from src.chart_legacy.chart_data_assembler import ChartDataAssembler
-from src.chart_legacy.data_provider_adapter import DataFetcherAdapter
 from src.chart_legacy.indicator_service import TechnicalIndicators
 from src.chart_legacy.market_time_utils import MarketTimeUtils
+from src.data_provider.hybrid_provider import HybridDataProvider
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +34,14 @@ _assembler: Optional[ChartDataAssembler] = None
 
 
 def _get_assembler() -> ChartDataAssembler:
-    """获取或创建 ChartDataAssembler 单例"""
+    """获取或创建 ChartDataAssembler 单例
+
+    数据链路：HybridDataProvider（方案C三层缓存 + 方案A多源轮询K线）
+    → ChartDataAssembler（指标计算 + 筹码分布 + 事件检测）
+    """
     global _assembler
     if _assembler is None:
-        data_provider = DataFetcherAdapter()
+        data_provider = HybridDataProvider()
         indicator_service = TechnicalIndicators(market='CN', timeframe='daily')
         _assembler = ChartDataAssembler(
             data_provider=data_provider,

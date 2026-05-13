@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
+import time
+from datetime import date as date_type
 from typing import Optional
 
 import pandas as pd
@@ -47,6 +49,21 @@ class CachingDataProvider:
         self._calendar = calendar
         self._aggregator = aggregator
 
+        # 空数据冷却期：外部数据源还没有最新 1-2 天的数据时，
+        # 记住 symbol → (latest_empty_end_date, expiry_timestamp)，
+        # 冷却期内跳过重复拉取，避免每次请求都触发 10s 超时。
+        self._empty_cooldown: dict[str, tuple[pd.Timestamp, float]] = {}
+
+    def _is_in_empty_cooldown(self, symbol: str, range_end: pd.Timestamp) -> bool:
+        """检查 range_end 是否在空数据冷却期内"""
+        if symbol not in self._empty_cooldown:
+            return False
+        empty_date, expiry = self._empty_cooldown[symbol]
+        if time.time() >= expiry:
+            del self._empty_cooldown[symbol]
+            return False
+        return range_end <= empty_date
+
     # ------------------------------------------------------------------ #
     # Daily bars
     # ------------------------------------------------------------------ #
@@ -65,20 +82,23 @@ class CachingDataProvider:
         start_date: pd.Timestamp,
         end_date: pd.Timestamp,
     ) -> pd.DataFrame | None:
-        """带超时的外部数据拉取，超时返回 None"""
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        """带超时的外部数据拉取，超时返回 None（不阻塞等待后台线程）"""
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        try:
             future = executor.submit(
                 self._external.fetch_daily_bars, symbol, start_date, end_date
             )
-            try:
-                return future.result(timeout=_EXTERNAL_FETCH_TIMEOUT)
-            except concurrent.futures.TimeoutError:
-                logger.warning(
-                    "[%s] External fetch timed out after %ds, falling back to cache",
-                    symbol,
-                    _EXTERNAL_FETCH_TIMEOUT,
-                )
-                return None
+            return future.result(timeout=_EXTERNAL_FETCH_TIMEOUT)
+        except concurrent.futures.TimeoutError:
+            logger.warning(
+                "[%s] External fetch timed out after %ds, falling back to cache",
+                symbol,
+                _EXTERNAL_FETCH_TIMEOUT,
+            )
+            return None
+        finally:
+            # wait=False: 超时后不阻塞等待后台线程，线程自行结束
+            executor.shutdown(wait=False)
 
     def get_daily_bars(
         self,
@@ -97,6 +117,20 @@ class CachingDataProvider:
         """
         start_date = self._normalize_date(start_date)
         end_date = self._normalize_date(end_date)
+
+        # 0. 将 end_date 截断到最近有效收盘日，避免请求盘前/盘中不存在的
+        #    未来数据，触发外部数据源链式超时（如 Efinance 6-7s）。
+        effective_end = self._calendar.get_effective_trading_date(symbol)
+        if effective_end < end_date:
+            logger.debug(
+                "[%s] end_date capped: %s -> %s (effective trading date)",
+                symbol,
+                end_date.strftime("%Y-%m-%d"),
+                effective_end.strftime("%Y-%m-%d"),
+            )
+            end_date = effective_end
+            if end_date < start_date:
+                return None
 
         # 1. 强制刷新时跳过缓存
         if force_refresh or not use_cache:
@@ -117,28 +151,52 @@ class CachingDataProvider:
             logger.debug("[%s] Cache hit: %s ~ %s", symbol, start_date.date(), end_date.date())
             return cached
 
-        # 5. 有缺失 — 将所有缺失区间合并为一次外部拉取（避免多次串行遍历 7 个数据源）
-        merged_start = min(s for s, _ in missing_ranges)
-        merged_end = max(e for _, e in missing_ranges)
+        # 5. 过滤处于空数据冷却期内的缺失区间（外部数据源还没有最新数据）
+        active_missing = [
+            (s, e) for s, e in missing_ranges
+            if not self._is_in_empty_cooldown(symbol, e)
+        ]
+        if not active_missing:
+            logger.debug(
+                "[%s] All %d missing ranges in empty cooldown, using cache",
+                symbol,
+                len(missing_ranges),
+            )
+            return cached
+
+        # 6. 将所有活跃缺失区间合并为一次外部拉取
+        merged_start = min(s for s, _ in active_missing)
+        merged_end = max(e for _, e in active_missing)
         logger.info(
             "[%s] Cache partial miss, %d missing ranges merged to %s ~ %s",
             symbol,
-            len(missing_ranges),
+            len(active_missing),
             merged_start.strftime("%Y-%m-%d"),
             merged_end.strftime("%Y-%m-%d"),
         )
 
         fetched = self._fetch_external_with_timeout(symbol, merged_start, merged_end)
         if fetched is None or fetched.empty:
-            logger.warning("[%s] External fetch returned no data, using cache", symbol)
+            self._empty_cooldown[symbol] = (
+                merged_end,
+                time.time() + 14400,
+            )
+            logger.warning(
+                "[%s] External fetch returned no data, cooldown until %s, using cache",
+                symbol,
+                pd.Timestamp(self._empty_cooldown[symbol][1], unit="s").strftime("%H:%M"),
+            )
             return cached
 
-        # 6. 自动保存到缓存
+        # 7. 拉取成功，清除该 symbol 的空数据冷却期
+        self._empty_cooldown.pop(symbol, None)
+
+        # 8. 自动保存到缓存
         if auto_save:
             saved = self._repository.save_daily_bars(fetched, symbol)
             logger.info("[%s] Auto-saved %d daily bars to cache", symbol, saved)
 
-        # 7. 合并缓存 + 外部数据返回
+        # 9. 合并缓存 + 外部数据返回
         if cached is not None and not cached.empty:
             combined = pd.concat([cached, fetched], ignore_index=True)
             combined = combined.drop_duplicates(subset=["trade_date"], keep="last")

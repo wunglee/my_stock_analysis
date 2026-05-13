@@ -210,6 +210,7 @@ const BacktestPage: React.FC = () => {
   const [technicalEndDate, setTechnicalEndDate] = useState(defaultEndDate);
   const [technicalEvalDays, setTechnicalEvalDays] = useState('10');
   const [klineLoaded, setKlineLoaded] = useState(false);
+  const [klineLoadId, setKlineLoadId] = useState(0);
 
   // 加载 K 线图（window.KlineChart 在 index.html 中通过 <script> 加载）
   const doLoadKline = useCallback((codes: string) => {
@@ -219,6 +220,7 @@ const BacktestPage: React.FC = () => {
     const code = tokens[0].trim();
     const pureCode = code.replace(/\.(SH|SZ|HK|US)$/i, '');
     setKlineLoaded(true);
+    setKlineLoadId((id) => id + 1);
 
     requestAnimationFrame(() => {
       window.KlineChart?.setCurrent({ id: pureCode }, 'CN', false);
@@ -268,6 +270,8 @@ const BacktestPage: React.FC = () => {
     technicalStartDate,
     technicalEndDate,
     technicalEvalDays,
+    klineLoaded,
+    klineLoadId,
   });
 
   // K线图 Overlay 管理
@@ -281,6 +285,49 @@ const BacktestPage: React.FC = () => {
     paramGroups,
     strategy: selectedStrategy,
   });
+
+  // 策略切换 → K线图技术指标联动
+  // 通过 DOM click 触发 kline_chart.js 的指标按钮，不修改 kline_chart.js 本身
+  useEffect(() => {
+    if (!klineLoaded) return;
+    // 延迟执行，确保 kline_chart.js 的 DOM 已渲染
+    const timer = setTimeout(() => {
+      const strategyToIndicator: Record<string, string | null> = {
+        dual_ma: null,      // 双均线 → MA 线在 Grid 0 内置，无需子指标
+        macd: 'MACD',
+        rsi: 'RSI',
+        bollinger: null,    // 布林带 → 在 Grid 0 上绘制，无需子指标
+      };
+      const indicator = strategyToIndicator[selectedStrategyId];
+      if (indicator) {
+        const btn = document.querySelector(`#indicatorSelector [data-indicator="${indicator}"]`);
+        if (btn instanceof HTMLElement) btn.click();
+      } else {
+        // Grid 0 策略：确保内置 MA 线恢复可见（回测 overlay 可能隐藏了它们）
+        const chart = (window as any).echarts?.getInstanceByDom(document.getElementById('mainChart'));
+        if (chart) {
+          chart.setOption({
+            series: [
+              { name: 'MA5', lineStyle: { opacity: 0.6 } },
+              { name: 'MA10', lineStyle: { opacity: 0.6 } },
+              { name: 'MA20', lineStyle: { opacity: 0.6 } },
+            ],
+          });
+        }
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [selectedStrategyId, klineLoaded]);
+
+  // 回测完成后自动选中第一个启用参数组，确保买卖信号立即可见
+  useEffect(() => {
+    if (!batchResults?.length || !klineLoaded) return;
+    if (activeGroupId) return; // 用户已手动选中某组，不干扰
+    const firstEnabled = paramGroups.find((g) => g.enabled);
+    if (firstEnabled) {
+      setActiveGroupId(firstEnabled.id);
+    }
+  }, [batchResults, klineLoaded, paramGroups, activeGroupId, setActiveGroupId]);
 
   // 从多代码输入中提取最后一个 token 作为搜索关键词
   // 如果最后一个 token 已经是完整代码（带市场后缀），则不触发搜索
@@ -422,6 +469,7 @@ const BacktestPage: React.FC = () => {
   };
 
   // Pagination
+
   const totalPages = Math.ceil(totalResults / pageSize);
   const handlePageChange = (page: number) => {
     const windowDays = evalDays ? parseInt(evalDays, 10) : undefined;
@@ -502,18 +550,6 @@ const BacktestPage: React.FC = () => {
                 className={`${BACKTEST_COMPACT_INPUT_CLASS} w-40 text-center tabular-nums`}
               />
             </div>
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <span className="text-xs text-muted-text">窗口</span>
-              <input
-                type="number"
-                min={1}
-                max={120}
-                value={technicalEvalDays}
-                onChange={(e) => setTechnicalEvalDays(e.target.value)}
-                placeholder="10"
-                className={`${BACKTEST_COMPACT_INPUT_CLASS} w-20 text-center tabular-nums`}
-              />
-            </div>
             <button
               type="button"
               onClick={handleLoadKline}
@@ -524,104 +560,11 @@ const BacktestPage: React.FC = () => {
             </button>
           </div>
 
-          {/* K线加载后：K线图 + 回测参数面板 */}
-          {klineLoaded && (
-            <>
-              {/* K线图容器（window.KlineChart 直接操作此 DOM） */}
-              <div className="max-w-5xl mb-3">
-                <div
-                  id="klineContainer"
-                  style={{ width: '100%', minHeight: 900 }}
-                />
-              </div>
-
-              {/* 回测参数面板：策略 + 模板 + 参数组 + 运行 */}
-              <Card variant="gradient" padding="md" className="max-w-5xl mb-3 animate-fade-in">
-                {/* 策略选择 + 运行按钮 */}
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <div className="flex items-center gap-2 whitespace-nowrap">
-                    <span className="text-xs text-muted-text">策略</span>
-                    <select
-                      value={selectedStrategyId}
-                      onChange={(e) => setSelectedStrategyId(e.target.value)}
-                      disabled={isBatchRunning}
-                      className={`${BACKTEST_COMPACT_INPUT_CLASS} w-40 cursor-pointer`}
-                    >
-                      {strategies.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleRunBatch}
-                    disabled={isBatchRunning || !selectedStrategyId}
-                    className="btn-primary flex items-center gap-1.5 whitespace-nowrap"
-                  >
-                    {isBatchRunning ? (
-                      <>
-                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        回测中...
-                      </>
-                    ) : (
-                      '运行批量回测'
-                    )}
-                  </button>
-                </div>
-
-                {/* 图表显示选项 */}
-                <div className="flex items-center gap-3 mb-3">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-secondary-text hover:text-foreground transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={shouldHideBuiltinMA}
-                      onChange={(e) => setShouldHideBuiltinMA(e.target.checked)}
-                      className="h-3.5 w-3.5 rounded border-white/20 bg-transparent accent-cyan-500"
-                    />
-                    隐藏内置MA线
-                  </label>
-                </div>
-
-                {/* 模板管理 */}
-                <TemplateManager
-                  templates={templates}
-                  isLoading={isLoadingTemplates}
-                  onLoad={loadTemplate}
-                  onDelete={deleteTemplate}
-                  onSave={saveAsTemplate}
-                  disabled={isBatchRunning}
-                />
-
-                {/* 参数组编辑器 */}
-                <div className="mt-3">
-                  <ParamGroupEditor
-                    strategy={selectedStrategy}
-                    paramGroups={paramGroups}
-                    activeGroupId={activeGroupId}
-                    onSelectGroup={setActiveGroupId}
-                    onAdd={addParamGroup}
-                    onRemove={removeParamGroup}
-                    onDuplicate={duplicateParamGroup}
-                    onUpdateParam={updateParamValue}
-                    onUpdateName={updateGroupName}
-                    onToggleEnabled={toggleGroupEnabled}
-                    onValidationChange={setInvalidGroupIds}
-                  />
-                </div>
-              </Card>
-
-              {strategyError && (
-                <ApiErrorAlert error={strategyError} className="mt-2 max-w-4xl" />
-              )}
-              {technicalError && (
-                <ApiErrorAlert error={technicalError} className="mt-2 max-w-4xl" />
-              )}
-            </>
+          {strategyError && (
+            <ApiErrorAlert error={strategyError} className="mt-2 max-w-4xl" />
+          )}
+          {technicalError && (
+            <ApiErrorAlert error={technicalError} className="mt-2 max-w-4xl" />
           )}
           </>
         ) : (
@@ -743,57 +686,107 @@ const BacktestPage: React.FC = () => {
       <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 lg:flex-row">
         {isTechnicalMode ? (
           <>
-            {/* Left sidebar - Batch Overview */}
-            <div className="flex max-h-[38vh] flex-col gap-3 overflow-y-auto lg:max-h-none lg:w-60 lg:flex-shrink-0">
-              {selectedStrategy ? (
-                <Card variant="gradient" padding="md" className="animate-fade-in">
-                  <div className="mb-3">
-                    <span className="label-uppercase">策略概览</span>
+            {/* Left sidebar - 回测参数面板 */}
+            <div className="flex max-h-[38vh] flex-col gap-2.5 overflow-y-auto lg:max-h-none lg:w-64 lg:flex-shrink-0">
+              {klineLoaded ? (
+                <>
+                  {/* 策略选择 + 运行按钮 */}
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={selectedStrategyId}
+                      onChange={(e) => setSelectedStrategyId(e.target.value)}
+                      disabled={isBatchRunning}
+                      className={`${BACKTEST_COMPACT_INPUT_CLASS} flex-1 min-w-0 cursor-pointer`}
+                    >
+                      {strategies.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleRunBatch}
+                      disabled={isBatchRunning || !selectedStrategyId}
+                      className="btn-primary flex items-center gap-1 whitespace-nowrap text-xs px-2.5 py-2"
+                    >
+                      {isBatchRunning ? (
+                        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      ) : (
+                        '运行'
+                      )}
+                    </button>
                   </div>
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-text">策略</span>
-                      <span className="text-secondary-text font-mono">{selectedStrategy.name}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-text">类别</span>
-                      <span className="text-secondary-text font-mono">{selectedStrategy.category}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-text">参数组</span>
-                      <span className="text-secondary-text font-mono">{paramGroups.filter(g => g.enabled).length} / {paramGroups.length}</span>
-                    </div>
-                    {batchResults && batchResults.length > 0 && (
-                      <>
-                        <div className="mt-2 pt-2 border-t border-white/5">
-                          <span className="label-uppercase mb-1 block">回测结果</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-text">最佳参数组</span>
-                          <span className="text-success font-mono">
-                            {batchResults.reduce((best, r) => {
-                              const bestFinal = best.equityCurve[best.equityCurve.length - 1]?.strategyValue || 0;
-                              const rFinal = r.equityCurve[r.equityCurve.length - 1]?.strategyValue || 0;
-                              return rFinal > bestFinal ? r : best;
-                            }, batchResults[0])?.group.name}
-                          </span>
-                        </div>
-                      </>
-                    )}
+
+                  {/* 回测评估窗口：向前看 N 个交易日来评估预测准确度 */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-secondary-text whitespace-nowrap">评估窗口</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={120}
+                      value={technicalEvalDays}
+                      onChange={(e) => setTechnicalEvalDays(e.target.value)}
+                      placeholder="10"
+                      disabled={isBatchRunning}
+                      className={`${BACKTEST_COMPACT_INPUT_CLASS} w-16 text-center tabular-nums`}
+                    />
+                    <span className="text-[10px] text-muted-text">天</span>
                   </div>
-                </Card>
+
+                  {/* 图表显示选项 */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-secondary-text hover:text-foreground transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={shouldHideBuiltinMA}
+                        onChange={(e) => setShouldHideBuiltinMA(e.target.checked)}
+                        className="h-3 w-3 rounded border-white/20 bg-transparent accent-cyan-500"
+                      />
+                      隐藏内置MA线
+                    </label>
+                  </div>
+
+                  {/* 模板管理 */}
+                  <TemplateManager
+                    templates={templates}
+                    isLoading={isLoadingTemplates}
+                    onLoad={loadTemplate}
+                    onDelete={deleteTemplate}
+                    onSave={saveAsTemplate}
+                    disabled={isBatchRunning}
+                  />
+
+                  {/* 参数组编辑器（手风琴） */}
+                  <ParamGroupEditor
+                    strategy={selectedStrategy}
+                    paramGroups={paramGroups}
+                    activeGroupId={activeGroupId}
+                    onSelectGroup={setActiveGroupId}
+                    onAdd={addParamGroup}
+                    onRemove={removeParamGroup}
+                    onDuplicate={duplicateParamGroup}
+                    onUpdateParam={updateParamValue}
+                    onUpdateName={updateGroupName}
+                    onToggleEnabled={toggleGroupEnabled}
+                    onValidationChange={setInvalidGroupIds}
+                  />
+                </>
               ) : (
-                <EmptyState
-                  title="加载中"
-                  description="正在加载策略配置..."
-                  className="h-full min-h-[12rem] border-dashed bg-card/45 shadow-none"
-                />
+                <div className="flex items-center justify-center py-8 text-xs text-muted-text">
+                  请先加载K线数据
+                </div>
               )}
             </div>
 
-            {/* Right content - Batch Results */}
-            <section className="min-h-0 flex-1 overflow-y-auto">
-              {!batchResults ? (
+            {/* Right content - K线图 + 结果 */}
+            <div className="min-h-0 flex-1 flex flex-col gap-3 overflow-y-auto">
+              {klineLoaded && <div id="klineContainer" style={{ width: '100%', minHeight: 600 }} />}
+              <section className="min-h-0 flex-1 overflow-y-auto">
+                {!batchResults ? (
                 <EmptyState
                   title="等待运行"
                   description="选择策略、配置参数组，点击运行批量回测。"
@@ -815,13 +808,14 @@ const BacktestPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="space-y-4">
-                    {batchResults.map((result) => (
+                    {batchResults.filter((r) => r?.group?.id).map((result) => (
                       <ParamGroupResultRow key={result.group.id} result={result} />
                     ))}
                   </div>
                 </div>
               )}
             </section>
+            </div>
           </>
         ) : (
           <>

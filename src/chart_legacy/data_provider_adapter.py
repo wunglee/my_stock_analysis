@@ -11,7 +11,8 @@ import pandas as pd
 
 from src.chart_legacy.market_types import PriceData, OHLCVRecord, IntradayData, IntradayTickRecord, OrderBookLevel, TradeDetailRecord, TickRange
 from src.chart_legacy.market_enums import MarketCode, TradingPhase
-from src.chart_legacy.market_time_utils import MarketTimeUtils, _infer_market_from_symbol
+from src.chart_legacy.market_time_utils import MarketTimeUtils
+from src.market_context import detect_market
 from src.data_provider.bar_aggregator import BarAggregator
 
 logger = logging.getLogger(__name__)
@@ -106,6 +107,11 @@ class DataFetcherAdapter:
                 source_name = "cache"
             else:
                 # 回退：直接走 DataFetcherManager（仅返回日线，需手动聚合周期）
+                # ⚠️ 此路径已弃用：绕过方案B的缓存层，应迁移到 CachingDataProvider
+                logger.warning(
+                    "[Adapter] %s 未配置 caching_provider，回退到 DataFetcherManager 直连（建议迁移到方案B）",
+                    symbol,
+                )
                 df, source_name = self._manager.get_daily_data(
                     stock_code=symbol,
                     start_date=start_str,
@@ -137,7 +143,7 @@ class DataFetcherAdapter:
 
             # fallback 路径（无 caching_provider）仍需手动聚合周期
             if self._caching_provider is None and period in ('weekly', 'monthly'):
-                market_code = MarketCode.parse(_infer_market_from_symbol(symbol))
+                market_code = MarketCode.parse(detect_market(symbol).upper())
                 price_data = self._convert_period(price_data, period, market_code)
 
             logger.info(f"[Adapter] {symbol} 获取成功: {price_data.count} 条 (来源: {source_name}, 周期: {period})")
@@ -378,7 +384,7 @@ class DataFetcherAdapter:
             }
         """
         market_local_time = MarketTimeUtils.get_market_time_now(symbol)
-        market_code = MarketCode.parse(_infer_market_from_symbol(symbol))
+        market_code = MarketCode.parse(detect_market(symbol).upper())
         trading_phase = MarketTimeUtils.determine_trading_phase(market_code, market_local_time)
         trade_date = market_local_time.strftime('%Y-%m-%d')
 

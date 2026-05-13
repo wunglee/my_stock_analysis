@@ -21,6 +21,10 @@ class _FakeCalendar:
     def __init__(self):
         self._days = pd.date_range("2024-10-08", periods=4, freq="D").tolist()
 
+    @property
+    def tz(self):
+        return None
+
     def is_trading_day(self, date: pd.Timestamp) -> bool:
         return date.normalize() in [d.normalize() for d in self._days]
 
@@ -36,6 +40,9 @@ class _FakeCalendar:
     def prev_trading_day(self, date: pd.Timestamp) -> pd.Timestamp:
         earlier = [d for d in self._days if d < date]
         return max(earlier) if earlier else date
+
+    def get_effective_trading_date(self, symbol: str) -> pd.Timestamp:
+        return max(self._days)
 
 
 class _FakeRepository:

@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { Badge } from '../common';
-import { EquityCurveChart } from './EquityCurveChart';
 import type { ParamGroupResult, KlineData, TechnicalSignal } from '../../types/technicalBacktest';
 
 interface Props {
@@ -221,9 +220,6 @@ export const ParamGroupResultRow: React.FC<Props> = ({ result }) => {
               </div>
             </div>
           </div>
-
-          {/* Equity curve */}
-          <EquityCurveChart equityCurve={equityCurve} height={200} />
 
           {/* Recent trades mini table */}
           {trades.length > 0 && (

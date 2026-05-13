@@ -279,3 +279,22 @@ class TemplateItem(BaseModel):
 
 class TemplateListResponse(BaseModel):
     templates: List[TemplateItem] = Field(default_factory=list)
+
+
+# ============ P4: 自动持久化会话 Schema ============
+
+class SessionSaveRequest(BaseModel):
+    stock_code: str = Field(..., min_length=1, max_length=16)
+    strategy_id: str = Field(..., min_length=1, max_length=64)
+    param_groups: List[Dict] = Field(..., min_length=1, max_length=6)
+    batch_results: Optional[List[Dict]] = None
+
+
+class SessionItem(BaseModel):
+    id: int
+    stock_code: str
+    strategy_id: str
+    param_groups: List[Dict]
+    batch_results: Optional[List[Dict]] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None

@@ -368,7 +368,13 @@ class SqliteBarRepository:
             }
 
         # 3. 找出缺失的交易日
-        missing_days = [d for d in trading_days if d.date() not in existing]
+        # 设计决策：不在此处对 trading_days 做 is_trading_day 二次过滤。
+        # 如果 trading_days_between 返回了非交易日，那是日历层的 bug，
+        # 必须让它暴露出来（触发外部拉取失败 / 数据异常），而不是被静默过滤掉。
+        missing_days = [
+            d for d in trading_days
+            if d.date() not in existing
+        ]
         if not missing_days:
             return []
 
