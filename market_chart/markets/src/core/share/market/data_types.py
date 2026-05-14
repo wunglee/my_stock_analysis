@@ -1,0 +1,131 @@
+"""
+市场数据类型定义
+
+职责：
+- 定义标准化的市场数据结构
+- 提供数据转换和验证功能
+- 为各模块提供统一的数据接口
+
+设计原则：
+- 使用 dataclass 确保类型安全
+- 提供便捷的数据转换方法
+- 保持向后兼容性
+"""
+
+from dataclasses import dataclass
+from typing import List
+
+import pandas as pd
+
+from core.share.market.market_time_utils import MarketTimeUtils
+
+
+@dataclass
+class OHLCVRecord:
+    """
+    单条OHLCV数据记录
+
+    数据标准：
+    - date: pd.Timestamp 类型，交易日期时间
+    - open: float，开盘价
+    - high: float，最高价
+    - low: float，最低价
+    - close: float，收盘价
+    - volume: float，成交量
+    """
+    date: pd.Timestamp
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+
+
+@dataclass
+class PriceData:
+    """
+    标准价格数据结构 - 明确的属性字段
+
+    属性：
+        records: List[OHLCVRecord] - OHLCV数据记录列表
+        symbol: str - 证券代码
+        start_date: pd.Timestamp - 开始日期
+        end_date: pd.Timestamp - 结束日期
+        count: int - 记录数量
+    """
+    records: List[OHLCVRecord]
+    symbol: str
+    start_date: pd.Timestamp
+    end_date: pd.Timestamp
+    count: int
+    needs_realtime_kline: bool = False  # 是否需要获取实时K线（盘前/盘中/午盘为True，盘后为False）
+
+    def __post_init__(self):
+        """验证数据结构"""
+        if self.records is not None:
+            if not isinstance(self.records, list):
+                raise ValueError("records must be a list of OHLCVRecord")
+            if len(self.records) != self.count:
+                raise ValueError("count must match the number of records")
+
+    def to_dataframe(self) -> pd.DataFrame:
+        """
+        转换为DataFrame格式（为了向后兼容）
+
+        Returns:
+            pd.DataFrame: 包含date, open, high, low, close, volume列的DataFrame
+        """
+        if not self.records:
+            return pd.DataFrame(columns=['date', 'open', 'high', 'low', 'close', 'volume'])
+
+        data = []
+        for record in self.records:
+            data.append({
+                'date': record.date,
+                'open': record.open,
+                'high': record.high,
+                'low': record.low,
+                'close': record.close,
+                'volume': record.volume
+            })
+
+        return pd.DataFrame(data)
+
+    @classmethod
+    def from_dataframe(cls, df: pd.DataFrame, symbol: str = "") -> 'PriceData':
+        """
+        从DataFrame创建PriceData对象
+
+        Args:
+            df: 包含OHLCV数据的DataFrame
+            symbol: 证券代码
+
+        Returns:
+            PriceData: 标准化的价格数据对象
+        """
+        required_columns = {'date', 'open', 'high', 'low', 'close', 'volume'}
+        if not required_columns.issubset(set(df.columns)):
+            raise ValueError(f"DataFrame must contain columns: {required_columns}")
+
+        records = []
+        for _, row in df.iterrows():
+            record = OHLCVRecord(
+                date=pd.to_datetime(row['date']),
+                open=float(row['open']),
+                high=float(row['high']),
+                low=float(row['low']),
+                close=float(row['close']),
+                volume=float(row['volume'])
+            )
+            records.append(record)
+
+        start_date = records[0].date if records else MarketTimeUtils.get_market_time_now(symbol)
+        end_date = records[-1].date if records else MarketTimeUtils.get_market_time_now(symbol)
+
+        return cls(
+            records=records,
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            count=len(records)
+        )
