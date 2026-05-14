@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Virtual environment
+.venv/
+venv/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+
+# Data files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs and reports
+logs/
+reports/
+
+# Sensitive config
+credentials.yml
+
+# OS
+.DS_Store
