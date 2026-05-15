@@ -22,6 +22,20 @@ function getXAxisDates(chart: any): string[] {
   return option.xAxis[0].data as string[];
 }
 
+/** 获取当前可视区域的数据索引范围 */
+function getVisibleIndexRange(chart: any): { min: number; max: number } | null {
+  try {
+    const option = chart?.getOption?.();
+    const dataZoom = option?.dataZoom?.[0];
+    if (!dataZoom) return null;
+    const min = typeof dataZoom.startValue === 'number' ? Math.round(dataZoom.startValue) : 0;
+    const max = typeof dataZoom.endValue === 'number' ? Math.round(dataZoom.endValue) : 0;
+    return { min, max };
+  } catch {
+    return null;
+  }
+}
+
 export interface EvaluationRange {
   startIndex: number;
   endIndex: number;
@@ -133,20 +147,64 @@ export function useEvaluationRange(
   const updatePixelRange = useCallback(() => {
     const chart = getChartInstance();
     const curRange = rangeRef.current;
-    if (!chart || !curRange) {
-      setPixelRange(null);
-      return;
-    }
+    // dataZoom 动画期间可能暂时拿不到 chart 或 range，保持旧值避免闪烁/消失
+    if (!chart || !curRange) return;
 
     const dates = getXAxisDates(chart);
-    if (dates.length === 0) {
-      setPixelRange(null);
-      return;
-    }
+    if (dates.length === 0) return;
+
+    // 获取可视区域范围
+    const visible = getVisibleIndexRange(chart);
+    const visMin = visible?.min ?? 0;
+    const visMax = visible?.max ?? dates.length - 1;
 
     // clamp indices to valid range
-    const startIdx = Math.max(0, Math.min(curRange.startIndex, dates.length - 1));
-    const endIdx = Math.max(0, Math.min(curRange.endIndex, dates.length - 1));
+    let startIdx = Math.max(0, Math.min(curRange.startIndex, dates.length - 1));
+    let endIdx = Math.max(0, Math.min(curRange.endIndex, dates.length - 1));
+
+    // 如果面板超出可视区域，自动拉回（保持宽度不变）
+    const panelWidth = endIdx - startIdx;
+    let adjusted = false;
+    if (endIdx < visMin) {
+      // 整个面板在可视区域左侧 → 拉到左边界
+      startIdx = visMin;
+      endIdx = Math.min(visMin + panelWidth, visMax);
+      adjusted = true;
+    } else if (startIdx > visMax) {
+      // 整个面板在可视区域右侧 → 拉到右边界
+      endIdx = visMax;
+      startIdx = Math.max(visMax - panelWidth, visMin);
+      adjusted = true;
+    } else if (startIdx < visMin) {
+      // 左边界超出 → 向右拉
+      startIdx = visMin;
+      endIdx = Math.min(visMin + panelWidth, visMax);
+      adjusted = true;
+    } else if (endIdx > visMax) {
+      // 右边界超出 → 向左拉
+      endIdx = visMax;
+      startIdx = Math.max(visMax - panelWidth, visMin);
+      adjusted = true;
+    }
+
+    // 确保最小宽度
+    if (endIdx - startIdx < 5) {
+      endIdx = Math.min(startIdx + 5, visMax);
+      startIdx = Math.max(endIdx - 5, visMin);
+      adjusted = true;
+    }
+
+    // 如果调整过 range，同步更新状态
+    if (adjusted && (startIdx !== curRange.startIndex || endIdx !== curRange.endIndex)) {
+      const newRange: EvaluationRange = {
+        startIndex: startIdx,
+        endIndex: endIdx,
+        startDate: dates[startIdx],
+        endDate: dates[endIdx],
+      };
+      setRange(newRange);
+      rangeRef.current = newRange;
+    }
 
     const startPoint = chart.convertToPixel({ seriesIndex: 0 }, [dates[startIdx], 0]);
     const endPoint = chart.convertToPixel({ seriesIndex: 0 }, [dates[endIdx], 0]);
@@ -155,11 +213,15 @@ export function useEvaluationRange(
     const startPixel = Array.isArray(startPoint) ? startPoint[0] : startPoint;
     const endPixel = Array.isArray(endPoint) ? endPoint[0] : endPoint;
 
-    if (typeof startPixel === 'number' && typeof endPixel === 'number') {
-      setPixelRange({
-        left: startPixel,
-        width: endPixel - startPixel,
-      });
+    if (
+      typeof startPixel === 'number' &&
+      typeof endPixel === 'number' &&
+      !Number.isNaN(startPixel) &&
+      !Number.isNaN(endPixel)
+    ) {
+      const left = startPixel;
+      const width = Math.max(0, endPixel - startPixel);
+      setPixelRange({ left, width });
     }
   }, []);
 
@@ -171,8 +233,8 @@ export function useEvaluationRange(
     if (!chart) return;
 
     const onUpdate = () => {
-      // 延迟一帧确保 ECharts 已完成布局
-      requestAnimationFrame(updatePixelRange);
+      // 延迟两帧确保 ECharts 已完成布局（dataZoom 动画期间状态可能不稳定）
+      requestAnimationFrame(() => requestAnimationFrame(updatePixelRange));
     };
 
     chart.on('finished', onUpdate);
@@ -236,10 +298,15 @@ export function useEvaluationRange(
       let newStart = startRange.startIndex;
       let newEnd = startRange.endIndex;
 
+      const visible = getVisibleIndexRange(chart);
+      const visMin = visible?.min ?? 0;
+      const visMax = visible?.max ?? dates.length - 1;
+
       if (isDraggingRef.current === 'start') {
-        newStart = Math.min(newIndex, startRange.endIndex - 5); // 最少保留 5 根 K线
+        // 限制在可视区域内，且至少保留 5 根 K线
+        newStart = Math.max(visMin, Math.min(newIndex, startRange.endIndex - 5));
       } else if (isDraggingRef.current === 'end') {
-        newEnd = Math.max(newIndex, startRange.startIndex + 5);
+        newEnd = Math.min(visMax, Math.max(newIndex, startRange.startIndex + 5));
       } else if (isDraggingRef.current === 'body') {
         const dx = e.clientX - dragStartXRef.current;
         const startPoint = chart.convertToPixel(
@@ -263,15 +330,15 @@ export function useEvaluationRange(
         newStart = startRange.startIndex + indexOffset;
         newEnd = startRange.endIndex + indexOffset;
 
-        // clamp
+        // clamp to visible range
         const rangeWidth = newEnd - newStart;
-        if (newStart < 0) {
-          newStart = 0;
-          newEnd = rangeWidth;
+        if (newStart < visMin) {
+          newStart = visMin;
+          newEnd = Math.min(visMin + rangeWidth, visMax);
         }
-        if (newEnd >= dates.length) {
-          newEnd = dates.length - 1;
-          newStart = newEnd - rangeWidth;
+        if (newEnd > visMax) {
+          newEnd = visMax;
+          newStart = Math.max(visMax - rangeWidth, visMin);
         }
       }
 

@@ -5,7 +5,7 @@
  * 使用 React Portal 渲染到 #mainChart 容器内，确保像素坐标与 ECharts 完全对齐。
  */
 
-import { useMemo, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useEvaluationRange } from '../../hooks/useEvaluationRange';
 import { pairSignalsToTrades, calculateRangePnl } from '../../utils/tradeCalculator';
@@ -72,7 +72,8 @@ function calculateSignals(
 /** P&L 结果标签 */
 function PnlLabel({ result }: { result: RangePnlResult }) {
   const winRatePct = (result.winRate * 100).toFixed(0);
-  const returnColor = result.totalReturnPct > 0 ? '#22c55e' : result.totalReturnPct < 0 ? '#ef4444' : '#9ca3af';
+  // A 股习惯：盈利红色，亏损绿色
+  const returnColor = result.totalReturnPct > 0 ? '#ef4444' : result.totalReturnPct < 0 ? '#22c55e' : '#9ca3af';
 
   return (
     <div
@@ -175,8 +176,8 @@ export function EvaluationRangeOverlay({
         position: 'absolute',
         left: pixelRange.left,
         width: pixelRange.width,
-        top: 50,
-        bottom: 40,
+        top: '5%',
+        bottom: '47%',
         pointerEvents: 'none',
         zIndex: 10,
       }}

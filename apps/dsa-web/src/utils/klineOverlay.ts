@@ -201,6 +201,7 @@ export interface SignalMarker {
   action: 'buy' | 'sell';
   price: number;
   reason: string;
+  index?: number; // 在 KlineData 中的索引，用于图表精确定位
 }
 
 /** 双均线策略信号：金叉买入 / 死叉卖出 */
@@ -229,6 +230,7 @@ export function calcDualMASignals(
         action: 'buy',
         price: klineData[i].low,
         reason: `金叉：短期均线(${shortPeriod}日)上穿长期均线(${longPeriod}日)`,
+        index: i,
       });
     }
     // 死叉：前一日短期 >= 长期，当日短期 < 长期
@@ -238,6 +240,7 @@ export function calcDualMASignals(
         action: 'sell',
         price: klineData[i].high,
         reason: `死叉：短期均线(${shortPeriod}日)下穿长期均线(${longPeriod}日)`,
+        index: i,
       });
     }
   }
@@ -299,6 +302,7 @@ export function calcMACDSignals(
         action: 'buy',
         price: klineData[i].low,
         reason: `金叉：DIF(${currDiff.toFixed(4)})上穿DEA(${currDea.toFixed(4)})`,
+        index: i,
       });
     }
     // 死叉：前一日 DIF >= DEA，当日 DIF < DEA
@@ -308,6 +312,7 @@ export function calcMACDSignals(
         action: 'sell',
         price: klineData[i].high,
         reason: `死叉：DIF(${currDiff.toFixed(4)})下穿DEA(${currDea.toFixed(4)})`,
+        index: i,
       });
     }
   }
@@ -337,6 +342,7 @@ export function calcRSISignals(
         action: 'buy',
         price: klineData[i].low,
         reason: `RSI从超卖区回升 (${prevRsi.toFixed(1)} → ${currRsi.toFixed(1)})`,
+        index: i,
       });
     }
     // 从超买区回落 → sell
@@ -346,6 +352,7 @@ export function calcRSISignals(
         action: 'sell',
         price: klineData[i].high,
         reason: `RSI从超买区回落 (${prevRsi.toFixed(1)} → ${currRsi.toFixed(1)})`,
+        index: i,
       });
     }
   }
@@ -379,6 +386,7 @@ export function calcBollingerSignals(
         action: 'sell',
         price: klineData[i].high,
         reason: `价格触及上轨 (收盘${currClose.toFixed(2)} > 上轨${currUpper.toFixed(2)})`,
+        index: i,
       });
     }
     // 下穿下轨 → buy（价格从上方向下穿到下轨之下）
@@ -388,6 +396,7 @@ export function calcBollingerSignals(
         action: 'buy',
         price: klineData[i].low,
         reason: `价格触及下轨 (收盘${currClose.toFixed(2)} < 下轨${currLower.toFixed(2)})`,
+        index: i,
       });
     }
   }
@@ -447,7 +456,7 @@ export function buildOverlaySeriesForGroup(
           name: `${prefix}_BUY`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'buy').map((s) => ({
-            value: [s.date, s.price],
+            value: [s.index ?? s.date, s.price],
             symbol: 'triangle',
             symbolSize: 14,
             itemStyle: { color: '#22c55e' },
@@ -462,7 +471,7 @@ export function buildOverlaySeriesForGroup(
           name: `${prefix}_SELL`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'sell').map((s) => ({
-            value: [s.date, s.price],
+            value: [s.index ?? s.date, s.price],
             symbol: 'triangle',
             symbolRotate: 180,
             symbolSize: 14,
@@ -515,7 +524,7 @@ export function buildOverlaySeriesForGroup(
           name: `${prefix}_BUY`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'buy').map((s) => ({
-            value: [s.date, s.price],
+            value: [s.index ?? s.date, s.price],
             symbol: 'triangle',
             symbolSize: 14,
             itemStyle: { color: '#22c55e' },
@@ -530,7 +539,7 @@ export function buildOverlaySeriesForGroup(
           name: `${prefix}_SELL`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'sell').map((s) => ({
-            value: [s.date, s.price],
+            value: [s.index ?? s.date, s.price],
             symbol: 'triangle',
             symbolRotate: 180,
             symbolSize: 14,
@@ -583,7 +592,7 @@ export function buildOverlaySeriesForGroup(
           name: `${prefix}_BUY`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'buy').map((s) => ({
-            value: [s.date, s.price],
+            value: [s.index ?? s.date, s.price],
             symbol: 'triangle',
             symbolSize: 14,
             itemStyle: { color: '#22c55e' },
@@ -598,7 +607,7 @@ export function buildOverlaySeriesForGroup(
           name: `${prefix}_SELL`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'sell').map((s) => ({
-            value: [s.date, s.price],
+            value: [s.index ?? s.date, s.price],
             symbol: 'triangle',
             symbolRotate: 180,
             symbolSize: 14,
