@@ -5,6 +5,16 @@ import type { ParsedApiError } from '../api/error';
 import type { StrategyConfig, StrategyParameter, ParamGroup, ParamGroupResult, BacktestTemplateItem } from '../types/technicalBacktest';
 import { useSessionState, isNonEmptyArray } from './useSessionState';
 import { useTechnicalTemplates } from './useTechnicalTemplates';
+import {
+  calcDualMASignals,
+  calcMACDSignals,
+  calcRSISignals,
+  calcBollingerSignals,
+  getKlineDataFromChart,
+} from '../utils/klineOverlay';
+import { pairSignalsToTrades } from '../utils/tradeCalculator';
+import type { SignalMarker, KlineBar } from '../utils/klineOverlay';
+import type { TradeRecord, EquityCurvePoint, TechnicalBacktestStockResult, TechnicalSignal } from '../types/technicalBacktest';
 
 /** 从策略参数定义构建默认参数值映射 */
 function buildDefaultParams(parameters: StrategyParameter[]): Record<string, number | boolean> {
@@ -18,6 +28,141 @@ function extractNormalizedStockCode(codesInput: string): string | null {
   const tokens = codesInput.split(/[,，\s]+/).filter(Boolean);
   if (tokens.length === 0) return null;
   return tokens[0].trim().replace(/\.(SH|SZ|HK|US)$/i, '');
+}
+
+/** 获取 ECharts 实例 */
+function getChartInstance(): any {
+  if (typeof window === 'undefined') return null;
+  const dom = document.getElementById('mainChart');
+  if (!dom) return null;
+  return (window as any).echarts?.getInstanceByDom(dom) ?? null;
+}
+
+/** 根据策略和参数组计算买卖信号 */
+function calculateSignals(strategy: StrategyConfig, group: ParamGroup, klineData: KlineBar[]): SignalMarker[] {
+  switch (strategy.id) {
+    case 'dual_ma': {
+      const short = Number(group.params.shortPeriod ?? 5);
+      const long = Number(group.params.longPeriod ?? 20);
+      return calcDualMASignals(klineData, short, long);
+    }
+    case 'macd': {
+      const fast = Number(group.params.fast ?? 12);
+      const slow = Number(group.params.slow ?? 26);
+      const signal = Number(group.params.signal ?? 9);
+      return calcMACDSignals(klineData, fast, slow, signal);
+    }
+    case 'rsi': {
+      const period = Number(group.params.period ?? 14);
+      const oversold = Number(group.params.oversold ?? 30);
+      const overbought = Number(group.params.overbought ?? 70);
+      return calcRSISignals(klineData, period, oversold, overbought);
+    }
+    case 'bollinger': {
+      const period = Number(group.params.period ?? 20);
+      const stdDev = Number(group.params.stdDev ?? 2);
+      return calcBollingerSignals(klineData, period, stdDev);
+    }
+    default:
+      return [];
+  }
+}
+
+/** SignalMarker → TechnicalSignal */
+function toTechnicalSignals(markers: SignalMarker[]): TechnicalSignal[] {
+  return markers.map((m) => ({
+    date: m.date,
+    action: m.action,
+    entryPrice: m.price,
+    stopLoss: null,
+    takeProfit: null,
+    reasons: m.reason ? [m.reason] : [],
+    confidence: 1,
+  }));
+}
+
+/** 构建权益曲线（简化版：每笔交易退出时应用收益） */
+function buildEquityCurve(klineData: KlineBar[], trades: TradeRecord[]): EquityCurvePoint[] {
+  if (klineData.length === 0) return [];
+
+  const initialValue = 100_000;
+  const points: EquityCurvePoint[] = [];
+
+  // 按退出日期聚合收益
+  const exitMap = new Map<string, number>();
+  trades.forEach((t) => {
+    const existing = exitMap.get(t.exitDate) ?? 0;
+    exitMap.set(t.exitDate, existing + t.returnPct);
+  });
+
+  let currentValue = initialValue;
+  const firstClose = klineData[0].close;
+
+  for (const bar of klineData) {
+    const dayReturn = exitMap.get(bar.date);
+    if (dayReturn != null) {
+      currentValue = currentValue * (1 + dayReturn / 100);
+    }
+
+    const benchmarkValue = initialValue * (bar.close / firstClose);
+
+    points.push({
+      date: bar.date,
+      strategyValue: currentValue,
+      benchmarkValue,
+    });
+  }
+
+  return points;
+}
+
+/** 构建单个参数组的即时回测结果 */
+function buildInstantResult(
+  group: ParamGroup,
+  strategy: StrategyConfig,
+  klineData: KlineBar[],
+  stockCode: string,
+): ParamGroupResult {
+  const signals = calculateSignals(strategy, group, klineData);
+  const trades = pairSignalsToTrades(signals);
+  const equityCurve = buildEquityCurve(klineData, trades);
+
+  const winTrades = trades.filter((t) => t.returnPct > 0);
+  const totalReturn = trades.reduce((sum, t) => sum + t.returnPct, 0);
+  const avgReturn = trades.length > 0 ? totalReturn / trades.length : 0;
+
+  // 计算最大回撤
+  let maxDrawdown = 0;
+  let peak = 100_000;
+  equityCurve.forEach((p) => {
+    if (p.strategyValue > peak) peak = p.strategyValue;
+    const dd = ((peak - p.strategyValue) / peak) * 100;
+    if (dd > maxDrawdown) maxDrawdown = dd;
+  });
+
+  const stockResult: TechnicalBacktestStockResult = {
+    code: stockCode,
+    stockName: stockCode,
+    dateRange: `${klineData[0]?.date} ~ ${klineData[klineData.length - 1]?.date}`,
+    totalSignals: signals.length,
+    winRate: trades.length > 0 ? (winTrades.length / trades.length) * 100 : 0,
+    avgReturn,
+    maxDrawdown,
+    klineData,
+    rules: [],
+    signals: toTechnicalSignals(signals),
+    evaluations: [],
+    equityCurve,
+    trades,
+  };
+
+  return {
+    group,
+    status: 'success',
+    stockResult,
+    equityCurve,
+    trades,
+  };
 }
 
 // ============ sessionStorage Keys ============
@@ -69,7 +214,7 @@ interface UseTechnicalBacktestReturn {
 export function useTechnicalBacktest(
   options: UseTechnicalBacktestOptions,
 ): UseTechnicalBacktestReturn {
-  const { technicalCodes, technicalStartDate, technicalEndDate, technicalEvalDays, klineLoaded, klineLoadId } = options;
+  const { technicalCodes, klineLoaded, klineLoadId } = options;
 
   // 策略列表（服务端数据，不持久化到 sessionStorage）
   const [strategies, setStrategies] = useState<StrategyConfig[]>([]);
@@ -323,6 +468,63 @@ export function useTechnicalBacktest(
     );
   }, [setParamGroups]);
 
+  /** 前端即时计算所有启用参数组的回测结果 */
+  const calculateInstantResults = useCallback(() => {
+    const stockCode = extractNormalizedStockCode(technicalCodesRef.current);
+    if (!stockCode || !selectedStrategy) return;
+
+    const chart = getChartInstance();
+    if (!chart) return;
+
+    const klineData = getKlineDataFromChart(chart);
+    if (!klineData.length) return;
+
+    const enabledGroups = paramGroups.filter((g) => g.enabled);
+    if (enabledGroups.length === 0) return;
+
+    const invalidEnabled = enabledGroups.filter((g) => invalidGroupIds.has(g.id));
+    if (invalidEnabled.length > 0) {
+      setTechnicalError({
+        title: '参数校验失败',
+        message: `存在 ${invalidEnabled.length} 个参数组的配置不满足策略约束条件，请检查红色标记的参数组`,
+        rawMessage: '参数组校验失败',
+        status: 400,
+        category: 'http_error',
+      });
+      return;
+    }
+
+    setIsBatchRunning(true);
+    setTechnicalError(null);
+
+    try {
+      const results = enabledGroups.map((group) =>
+        buildInstantResult(group, selectedStrategy, klineData, stockCode),
+      );
+      setBatchResults(results);
+    } catch (err) {
+      setTechnicalError({
+        title: '计算错误',
+        message: err instanceof Error ? err.message : '回测计算失败',
+        rawMessage: String(err),
+        status: 500,
+        category: 'http_error',
+      });
+    } finally {
+      setIsBatchRunning(false);
+    }
+  }, [paramGroups, invalidGroupIds, selectedStrategy]);
+
+  // 参数变化时自动触发即时计算
+  useEffect(() => {
+    if (!klineLoaded || !selectedStrategy || paramGroups.length === 0) return;
+    // debounce 300ms 避免频繁参数调整时重复计算
+    const timer = setTimeout(() => {
+      calculateInstantResults();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [klineLoaded, selectedStrategy, paramGroups, klineLoadId, calculateInstantResults]);
+
   const handleRunBatch = useCallback(async () => {
     const codes = technicalCodes
       .split(/[,，\s]+/)
@@ -339,7 +541,6 @@ export function useTechnicalBacktest(
       });
       return;
     }
-    if (!technicalStartDate || !technicalEndDate) return;
 
     const enabledGroups = paramGroups.filter((g) => g.enabled);
     if (enabledGroups.length === 0) {
@@ -365,25 +566,9 @@ export function useTechnicalBacktest(
       return;
     }
 
-    setIsBatchRunning(true);
-    setBatchResults(null);
-    setTechnicalError(null);
-    try {
-      const results = await backtestApi.runTechnicalBatch({
-        codes,
-        startDate: technicalStartDate,
-        endDate: technicalEndDate,
-        evalWindowDays: parseInt(technicalEvalDays, 10) || 10,
-        strategyId: selectedStrategyId,
-        paramGroups: enabledGroups,
-      });
-      setBatchResults(results);
-    } catch (err) {
-      setTechnicalError(getParsedApiError(err));
-    } finally {
-      setIsBatchRunning(false);
-    }
-  }, [technicalCodes, technicalStartDate, technicalEndDate, technicalEvalDays, paramGroups, invalidGroupIds, selectedStrategyId]);
+    // 前端即时计算（不再调用后端）
+    calculateInstantResults();
+  }, [paramGroups, invalidGroupIds, calculateInstantResults]);
 
   return {
     strategies,

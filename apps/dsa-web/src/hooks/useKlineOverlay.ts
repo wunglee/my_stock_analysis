@@ -25,6 +25,7 @@ import {
 
 interface UseKlineOverlayOptions {
   chartReady: boolean;
+  klineLoadId?: number;
   paramGroups: ParamGroup[];
   strategy: StrategyConfig | undefined;
 }
@@ -65,7 +66,7 @@ function applyMAVisibility(chart: any, hide: boolean): void {
 // ============ Hook ============
 
 export function useKlineOverlay(options: UseKlineOverlayOptions): UseKlineOverlayReturn {
-  const { chartReady, paramGroups, strategy } = options;
+  const { chartReady, klineLoadId, paramGroups, strategy } = options;
 
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [shouldHideBuiltinMA, setShouldHideBuiltinMA] = useState(false);
@@ -233,10 +234,13 @@ export function useKlineOverlay(options: UseKlineOverlayOptions): UseKlineOverla
         if (dh) c.off('dataZoom', dh);
         (chartRef as any)._onFinished = null;
         (chartRef as any)._onDataZoom = null;
+        clearOverlays(c);
       }
+      overlayCache.current.clear();
+      trackedKlineLengthRef.current = 0;
     };
-    // strategy 变化时重新初始化：清掉旧 handler，用新策略重建
-  }, [chartReady, strategy]);
+    // strategy / klineLoadId 变化时重新初始化：清掉旧 handler，用新策略重建
+  }, [chartReady, strategy, klineLoadId]);
 
   // ═══════════════════════════════════════════════
   // Effect B：状态变更 → 同步到 chart

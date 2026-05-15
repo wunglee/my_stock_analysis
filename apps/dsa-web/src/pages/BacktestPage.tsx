@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Check, Minus, X } from 'lucide-react';
 import { StockAutocomplete } from '../components/StockAutocomplete';
 import { ParamGroupEditor } from '../components/backtest/ParamGroupEditor';
@@ -16,6 +16,7 @@ import type {
 } from '../types/backtest';
 import { useTechnicalBacktest } from '../hooks/useTechnicalBacktest';
 import { useKlineOverlay } from '../hooks/useKlineOverlay';
+import { EvaluationRangeOverlay } from '../components/backtest/EvaluationRangeOverlay';
 
 const BACKTEST_COMPACT_INPUT_CLASS =
   'input-surface input-focus-glow h-10 rounded-xl border bg-transparent px-3 py-2 text-xs transition-all focus:outline-none disabled:cursor-not-allowed disabled:opacity-60';
@@ -208,7 +209,7 @@ const BacktestPage: React.FC = () => {
   const [technicalCodes, setTechnicalCodes] = useState('');
   const [technicalStartDate, setTechnicalStartDate] = useState(defaultStartDate);
   const [technicalEndDate, setTechnicalEndDate] = useState(defaultEndDate);
-  const [technicalEvalDays, setTechnicalEvalDays] = useState('10');
+  const [technicalEvalDays] = useState('10');
   const [klineLoaded, setKlineLoaded] = useState(false);
   const [klineLoadId, setKlineLoadId] = useState(0);
 
@@ -259,7 +260,6 @@ const BacktestPage: React.FC = () => {
     batchResults,
     isBatchRunning,
     technicalError,
-    handleRunBatch,
     templates,
     isLoadingTemplates,
     saveAsTemplate,
@@ -282,6 +282,7 @@ const BacktestPage: React.FC = () => {
     setShouldHideBuiltinMA,
   } = useKlineOverlay({
     chartReady: klineLoaded,
+    klineLoadId,
     paramGroups,
     strategy: selectedStrategy,
   });
@@ -319,15 +320,32 @@ const BacktestPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [selectedStrategyId, klineLoaded]);
 
-  // 回测完成后自动选中第一个启用参数组，确保买卖信号立即可见
+  // 回测完成后自动选中第一个启用参数组（仅首次获得结果时）
+  const hasAutoSelectedRef = useRef(false);
   useEffect(() => {
     if (!batchResults?.length || !klineLoaded) return;
-    if (activeGroupId) return; // 用户已手动选中某组，不干扰
+    if (hasAutoSelectedRef.current) return;
+    if (activeGroupId) return;
     const firstEnabled = paramGroups.find((g) => g.enabled);
     if (firstEnabled) {
+      hasAutoSelectedRef.current = true;
       setActiveGroupId(firstEnabled.id);
     }
   }, [batchResults, klineLoaded, paramGroups, activeGroupId, setActiveGroupId]);
+
+  // 点击参数面板外部时关闭展开状态并恢复MA线
+  useEffect(() => {
+    if (!isTechnicalMode || !activeGroupId) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const panel = document.getElementById('paramGroupPanel');
+      const target = e.target as Node;
+      if (panel && !panel.contains(target)) {
+        setActiveGroupId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isTechnicalMode, activeGroupId, setActiveGroupId]);
 
   // 从多代码输入中提取最后一个 token 作为搜索关键词
   // 如果最后一个 token 已经是完整代码（带市场后缀），则不触发搜索
@@ -687,10 +705,10 @@ const BacktestPage: React.FC = () => {
         {isTechnicalMode ? (
           <>
             {/* Left sidebar - 回测参数面板 */}
-            <div className="flex max-h-[38vh] flex-col gap-2.5 overflow-y-auto lg:max-h-none lg:w-64 lg:flex-shrink-0">
+            <div id="paramGroupPanel" className="flex max-h-[38vh] flex-col gap-2.5 overflow-y-auto lg:max-h-none lg:w-64 lg:flex-shrink-0">
               {klineLoaded ? (
                 <>
-                  {/* 策略选择 + 运行按钮 */}
+                  {/* 策略选择 */}
                   <div className="flex items-center gap-1.5">
                     <select
                       value={selectedStrategyId}
@@ -704,37 +722,12 @@ const BacktestPage: React.FC = () => {
                         </option>
                       ))}
                     </select>
-                    <button
-                      type="button"
-                      onClick={handleRunBatch}
-                      disabled={isBatchRunning || !selectedStrategyId}
-                      className="btn-primary flex items-center gap-1 whitespace-nowrap text-xs px-2.5 py-2"
-                    >
-                      {isBatchRunning ? (
-                        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                      ) : (
-                        '运行'
-                      )}
-                    </button>
-                  </div>
-
-                  {/* 回测评估窗口：向前看 N 个交易日来评估预测准确度 */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-secondary-text whitespace-nowrap">评估窗口</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={120}
-                      value={technicalEvalDays}
-                      onChange={(e) => setTechnicalEvalDays(e.target.value)}
-                      placeholder="10"
-                      disabled={isBatchRunning}
-                      className={`${BACKTEST_COMPACT_INPUT_CLASS} w-16 text-center tabular-nums`}
-                    />
-                    <span className="text-[10px] text-muted-text">天</span>
+                    {isBatchRunning && (
+                      <svg className="w-4 h-4 animate-spin text-accent" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
                   </div>
 
                   {/* 图表显示选项 */}
@@ -784,7 +777,18 @@ const BacktestPage: React.FC = () => {
 
             {/* Right content - K线图 + 结果 */}
             <div className="min-h-0 flex-1 flex flex-col gap-3 overflow-y-auto">
-              {klineLoaded && <div id="klineContainer" style={{ width: '100%', minHeight: 600 }} />}
+              {klineLoaded && (
+                <div style={{ position: 'relative' }}>
+                  <div id="klineContainer" style={{ width: '100%', minHeight: 600 }} />
+                  <EvaluationRangeOverlay
+                    chartReady={klineLoaded}
+                    klineLoadId={klineLoadId}
+                    strategy={selectedStrategy}
+                    paramGroups={paramGroups}
+                    activeGroupId={activeGroupId}
+                  />
+                </div>
+              )}
               <section className="min-h-0 flex-1 overflow-y-auto">
                 {!batchResults ? (
                 <EmptyState

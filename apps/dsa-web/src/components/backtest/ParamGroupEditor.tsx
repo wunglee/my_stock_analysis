@@ -194,11 +194,22 @@ export const ParamGroupEditor: React.FC<Props> = ({
                 </button>
               )}
 
-              <ChevronDown
-                className={`h-3.5 w-3.5 text-muted-text flex-shrink-0 transition-transform duration-200 ${
-                  isExpanded ? 'rotate-180' : ''
-                }`}
-              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!group.enabled) return;
+                  onSelectGroup(isExpanded ? null : group.id);
+                }}
+                className="text-muted-text hover:text-foreground transition-colors flex-shrink-0 p-0.5"
+                title={isExpanded ? '折叠' : '展开'}
+              >
+                <ChevronDown
+                  className={`h-3.5 w-3.5 transition-transform duration-200 ${
+                    isExpanded ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
             </div>
 
             {/* Body — 仅展开时渲染 */}
