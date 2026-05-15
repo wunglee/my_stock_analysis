@@ -93,48 +93,87 @@ class StockService:
     ) -> Dict[str, Any]:
         """
         获取股票历史行情
-        
+
         Args:
             stock_code: 股票代码
             period: K 线周期 (daily/weekly/monthly)
             days: 获取天数
-            
+
         Returns:
             历史行情数据字典
-            
-        Raises:
-            ValueError: 当 period 不是 daily 时抛出（weekly/monthly 暂未实现）
         """
-        # 验证 period 参数，只支持 daily
-        if period != "daily":
-            raise ValueError(
-                f"暂不支持 '{period}' 周期，目前仅支持 'daily'。"
-                "weekly/monthly 聚合功能将在后续版本实现。"
-            )
-        
         try:
-            # 调用数据获取器获取历史数据
+            # 使用新的 history_provider 体系获取数据
+            from src.history_provider import (
+                MemoryCacheProvider,
+                DbProvider,
+                ExternalApiProvider,
+                MultiSourceProvider,
+                ThreeLayerProvider,
+            )
+            from src.data_provider.bar_repository import SqliteBarRepository
+            from src.data_provider.trading_calendar_adapter import XCalTradingCalendar
+            from src.storage import DatabaseManager
             from data_provider.base import DataFetcherManager
-            
-            manager = DataFetcherManager()
-            df, source = manager.get_daily_data(stock_code, days=days)
-            
+
+            calendar = XCalTradingCalendar(market="cn")
+            bar_repo = SqliteBarRepository(
+                db_manager=DatabaseManager.get_instance(),
+                calendar=calendar,
+            )
+
+            memory = MemoryCacheProvider()
+            db = DbProvider(repository=bar_repo)
+
+            fetcher_mgr = DataFetcherManager()
+            fetchers = fetcher_mgr._get_fetchers_snapshot()
+
+            def _make_adapter(fetcher):
+                """将 BaseFetcher 适配为 ExternalApiProvider 的接口"""
+                def adapter(symbol: str, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame | None:
+                    df = fetcher.get_daily_data(
+                        stock_code=symbol,
+                        start_date=start.strftime("%Y-%m-%d"),
+                        end_date=end.strftime("%Y-%m-%d"),
+                    )
+                    return df if df is not None and not df.empty else None
+                return adapter
+
+            ext_providers = [
+                ExternalApiProvider(name=f.name, fetcher=_make_adapter(f))
+                for f in fetchers
+            ]
+            multi_source = MultiSourceProvider(providers=ext_providers)
+
+            three_layer = ThreeLayerProvider(
+                memory=memory,
+                db=db,
+                multi_source=multi_source,
+                calendar=calendar,
+            )
+
+            end_date = pd.Timestamp.now()
+            start_date = end_date - pd.Timedelta(days=days * 2)
+
+            df = three_layer.fetch(stock_code, start_date, end_date, period)
+
             if df is None or df.empty:
                 logger.warning(f"获取 {stock_code} 历史数据失败")
                 return {"stock_code": stock_code, "period": period, "data": []}
-            
+
             # 获取股票名称
-            stock_name = manager.get_stock_name(stock_code)
-            
+            stock_name = fetcher_mgr.get_stock_name(stock_code)
+
             # 转换为响应格式
             data = []
+            date_col = "trade_date" if "trade_date" in df.columns else "date"
             for _, row in df.iterrows():
-                date_val = row.get("date")
+                date_val = row.get(date_col)
                 if hasattr(date_val, "strftime"):
                     date_str = date_val.strftime("%Y-%m-%d")
                 else:
                     date_str = str(date_val)
-                
+
                 data.append({
                     "date": date_str,
                     "open": float(row.get("open", 0)),
@@ -145,14 +184,14 @@ class StockService:
                     "amount": float(row.get("amount", 0)) if row.get("amount") else None,
                     "change_percent": float(row.get("pct_chg", 0)) if row.get("pct_chg") else None,
                 })
-            
+
             return {
                 "stock_code": stock_code,
                 "stock_name": stock_name,
                 "period": period,
                 "data": data,
             }
-            
+
         except ImportError:
             logger.warning("DataFetcherManager 未找到，返回空数据")
             return {"stock_code": stock_code, "period": period, "data": []}

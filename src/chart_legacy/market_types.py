@@ -173,3 +173,24 @@ class TickRange:
             end_time = min(current_time, pd.Timestamp(f"{trade_date_str} 15:00:00"))
 
         return cls(start_time=start_time, end_time=end_time, period_seconds=5)
+
+
+@dataclass
+class UnifiedRealtimeQuote:
+    """统一实时行情快照
+
+    由 DataFetcherManager.get_realtime_quote() 返回的标准化结构。
+    各数据源适配器负责将原始数据转换为此格式。
+    """
+
+    symbol: str
+    price: float | None = None
+    open_price: float | None = None
+    high: float | None = None
+    low: float | None = None
+    pre_close: float | None = None
+    volume: int = 0
+    turnover_rate: float | None = None
+    change: float | None = None
+    change_percent: float | None = None
+    timestamp: pd.Timestamp | None = None

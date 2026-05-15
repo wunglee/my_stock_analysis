@@ -1,0 +1,96 @@
+# 数据库配置 - 开发环境
+# 用于存储和缓存市场数据，提升性能和稳定性
+
+# 数据库类型: sqlite, postgresql, mysql
+database_type: sqlite
+
+# SQLite 配置
+sqlite:
+  # 数据库文件路径（相对于项目根目录）
+  database_path: data/market_data.db
+  
+  # 连接配置
+  check_same_thread: false  # 允许多线程访问
+  timeout: 30.0  # 超时时间（秒）
+  
+  # 性能优化
+  journal_mode: WAL  # Write-Ahead Logging 模式，提升并发性能
+  synchronous: NORMAL  # 同步模式: OFF, NORMAL, FULL
+  cache_size: -64000  # 缓存大小（KB），负数表示KB，正数表示页数
+  temp_store: MEMORY  # 临时表存储位置: DEFAULT, FILE, MEMORY
+  
+  # 连接池配置（用于未来扩展）
+  pool_size: 5  # 连接池大小
+  max_overflow: 10  # 最大溢出连接数
+  pool_timeout: 30  # 连接池超时时间（秒）
+  pool_recycle: 3600  # 连接回收时间（秒）
+
+# 数据同步配置
+sync:
+  # 启用自动同步
+  auto_sync: false
+  
+  # 同步频率（秒）
+  sync_interval: 3600
+  
+  # 同步时间窗口（避免交易时段）
+  sync_window:
+    start_hour: 1  # 凌晨1点开始
+    end_hour: 6  # 早上6点结束
+  
+  # 并发同步任务数
+  max_concurrent_sync: 3
+  
+  # 失败重试
+  retry:
+    max_attempts: 3
+    retry_delay: 60  # 重试延迟（秒）
+    backoff_factor: 2  # 重试延迟倍增因子
+
+# 性能监控
+monitoring:
+  # 启用性能监控
+  enabled: true
+  
+  # 慢查询阈值（毫秒）
+  slow_query_threshold: 1000
+  
+  # 记录查询统计
+  log_queries: false
+  
+  # 数据库大小警告阈值（MB）
+  size_warning_threshold: 1000
+
+# PostgreSQL 配置（生产环境推荐）
+postgresql:
+  enabled: false
+  host: localhost
+  port: 5432
+  database: deepseekquant
+  user: postgres
+  password: ""
+  
+  # 连接池配置
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 30
+  pool_recycle: 3600
+  
+  # SSL配置
+  ssl_mode: prefer  # disable, allow, prefer, require, verify-ca, verify-full
+
+# MySQL 配置（备选）
+mysql:
+  enabled: false
+  host: localhost
+  port: 3306
+  database: deepseekquant
+  user: root
+  password: ""
+  charset: utf8mb4
+  
+  # 连接池配置
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 30
+  pool_recycle: 3600

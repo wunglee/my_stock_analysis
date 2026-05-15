@@ -1,0 +1,216 @@
+- generic [ref=e4]:
+  - complementary "桌面侧边导航" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img [ref=e9]
+        - paragraph [ref=e11]: DSA
+      - navigation "主导航" [ref=e12]:
+        - link "首页" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e15]
+          - generic [ref=e18]: 首页
+        - link "问股" [ref=e19] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e20]
+          - generic [ref=e24]: 问股
+        - link "持仓" [ref=e25] [cursor=pointer]:
+          - /url: /portfolio
+          - img [ref=e26]
+          - generic [ref=e30]: 持仓
+        - link "回测" [ref=e31] [cursor=pointer]:
+          - /url: /backtest
+          - img [ref=e32]
+          - generic [ref=e34]: 回测
+        - link "设置" [ref=e35] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e36]
+          - generic [ref=e39]: 设置
+      - button "切换主题" [ref=e42]:
+        - img [ref=e43]
+        - generic [ref=e45]: 主题
+  - main [ref=e46]:
+    - generic [ref=e48]:
+      - generic [ref=e50]:
+        - combobox "输入股票代码或名称，如 600519、贵州茅台、AAPL" [ref=e53]
+        - generic [ref=e54] [cursor=pointer]:
+          - checkbox "推送通知" [checked] [ref=e55]
+          - text: 推送通知
+        - button "分析" [disabled] [ref=e56]
+      - generic [ref=e57]:
+        - complementary [ref=e60]:
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - generic [ref=e65]:
+                - img [ref=e67]
+                - heading "历史分析" [level=3] [ref=e69]
+              - generic [ref=e70]:
+                - generic [ref=e71] [cursor=pointer]:
+                  - checkbox "全选当前已加载历史记录" [ref=e72]
+                  - generic [ref=e73]: 全选当前
+                - button "删除" [disabled]
+            - generic [ref=e74]:
+              - generic [ref=e75]:
+                - checkbox [ref=e77] [cursor=pointer]
+                - button "宁德时代 观望 59 03750.HK 2026/05/07 16:55" [ref=e78]:
+                  - generic [ref=e81]:
+                    - generic [ref=e82]:
+                      - generic [ref=e84]: 宁德时代
+                      - generic [ref=e85]: 观望 59
+                    - generic [ref=e86]:
+                      - generic [ref=e87]: 03750.HK
+                      - generic [ref=e89]: 2026/05/07 16:55
+              - generic [ref=e90]:
+                - checkbox [ref=e92] [cursor=pointer]
+                - button "贵州茅台 减仓 32 600519.SH 2026/05/03 15:01" [ref=e93]:
+                  - generic [ref=e96]:
+                    - generic [ref=e97]:
+                      - generic [ref=e99]: 贵州茅台
+                      - generic [ref=e100]: 减仓 32
+                    - generic [ref=e101]:
+                      - generic [ref=e102]: 600519.SH
+                      - generic [ref=e104]: 2026/05/03 15:01
+              - generic [ref=e105]:
+                - checkbox [ref=e107] [cursor=pointer]
+                - button "宁德时代 减仓 30 03750.HK 2026/05/02 16:26" [ref=e108]:
+                  - generic [ref=e111]:
+                    - generic [ref=e112]:
+                      - generic [ref=e114]: 宁德时代
+                      - generic [ref=e115]: 减仓 30
+                    - generic [ref=e116]:
+                      - generic [ref=e117]: 03750.HK
+                      - generic [ref=e119]: 2026/05/02 16:26
+              - generic [ref=e120]:
+                - checkbox [ref=e122] [cursor=pointer]
+                - button "江西铜业 减仓 35 600362.SH 2026/05/02 16:13" [ref=e123]:
+                  - generic [ref=e126]:
+                    - generic [ref=e127]:
+                      - generic [ref=e129]: 江西铜业
+                      - generic [ref=e130]: 减仓 35
+                    - generic [ref=e131]:
+                      - generic [ref=e132]: 600362.SH
+                      - generic [ref=e134]: 2026/05/02 16:13
+              - generic [ref=e136]: 已到底部
+        - generic [ref=e139]:
+          - generic [ref=e140]:
+            - button "重新分析" [ref=e141] [cursor=pointer]:
+              - img [ref=e142]
+              - text: 重新分析
+            - button "追问 AI" [ref=e144] [cursor=pointer]:
+              - img [ref=e145]
+              - text: 追问 AI
+            - button "完整分析报告" [ref=e147] [cursor=pointer]:
+              - img [ref=e148]
+              - text: 完整分析报告
+          - generic [ref=e150]:
+            - generic [ref=e152]:
+              - generic [ref=e153]:
+                - generic [ref=e155]:
+                  - generic [ref=e157]:
+                    - heading "宁德时代" [level=2] [ref=e159]
+                    - generic [ref=e160]:
+                      - generic [ref=e161]: 03750.HK
+                      - generic [ref=e162]:
+                        - img [ref=e163]
+                        - text: 2026/05/07 16:55
+                  - generic [ref=e165]:
+                    - generic [ref=e166]: 核心洞察
+                    - paragraph [ref=e167]: "[降级结果] [风控下调: buy -> hold] The stock completed a sharp 17.5% correction from its ATH of 736 to 607, retracing ~46.7% of the prior rally — consistent with an Elliott Wave 2 bottom. The subsequent 3-day recovery (608→669) came with accelerating vol…"
+                - generic [ref=e168]:
+                  - generic [ref=e170] [cursor=pointer]:
+                    - img [ref=e172]
+                    - generic [ref=e174]:
+                      - heading "操作建议" [level=4] [ref=e175]
+                      - paragraph [ref=e176]: 观望（原建议已被风控下调）
+                  - generic [ref=e178] [cursor=pointer]:
+                    - img [ref=e180]
+                    - generic [ref=e182]:
+                      - heading "趋势预测" [level=4] [ref=e183]
+                      - paragraph [ref=e184]: 技术面neutral，趋势评分 55
+              - generic [ref=e187]:
+                - heading "市场情绪" [level=3] [ref=e188]
+                - generic [ref=e189]:
+                  - generic [ref=e190]: 恐惧贪婪指数
+                  - generic [ref=e191]:
+                    - img [ref=e192]
+                    - generic [ref=e196]:
+                      - generic [ref=e197]: "59"
+                      - generic [ref=e198]: 中性
+            - generic [ref=e199]:
+              - generic [ref=e201]:
+                - generic [ref=e202]: 策略点位
+                - heading "狙击点位" [level=3] [ref=e203]
+              - generic [ref=e204]:
+                - generic [ref=e206]:
+                  - generic [ref=e207]: 理想买入
+                  - generic [ref=e208]: "630.0"
+                - generic [ref=e211]:
+                  - generic [ref=e212]: 二次买入
+                  - generic [ref=e213]: —
+                - generic [ref=e216]:
+                  - generic [ref=e217]: 止损价位
+                  - generic [ref=e218]: "625.0"
+                - generic [ref=e221]:
+                  - generic [ref=e222]: 止盈目标
+                  - generic [ref=e223]: "680.0"
+            - generic [ref=e225]:
+              - generic [ref=e226]:
+                - generic [ref=e227]:
+                  - generic [ref=e228]: 资讯动态
+                  - heading "相关资讯" [level=3] [ref=e229]
+                - button "刷新" [ref=e233]
+              - generic [ref=e258]:
+                - generic [ref=e260]:
+                  - generic [ref=e261]:
+                    - paragraph [ref=e262]: 宁德时代(03750)股票股价, 市值, 实时行情, 走势图, 财报
+                    - paragraph [ref=e263]: 宁德时代现价669.000，短线结构略有改善，但仍未算正式转强。股价刚刚高于保历加通道中轴668.662，同时高于10日线659.200及30日线656.413，代表高位回落后的反弹开始有承接 ...
+                  - link "跳转" [ref=e264] [cursor=pointer]:
+                    - /url: https://www.moomoo.com/hans/stock/03750-HK
+                    - text: 跳转
+                    - img [ref=e265]
+                - generic [ref=e268]:
+                  - generic [ref=e269]:
+                    - paragraph [ref=e270]: 沪丶深港通SH/SZ-HK Stock Connect - 中国市场新闻
+                    - paragraph [ref=e271]: 宁德时代(03750.HK)子公司时代智能近日与土耳其汽车品牌Togg正式达成磐石底盘量产合作，为内地首个一体化智能底盘面向海外乘用车市场实现供货的项目。 【网页详情】 网站地图 免责声明 阁下明确同意使用本网站／应用程式的风险是由阁下个人承担。 AASTOCKS.com Limited、香港交易所资讯服务有限公司、中国投资信息有限公司、深圳证券信息有限公司、Nasdaq, Inc.、其控...
+                  - link "跳转" [ref=e272] [cursor=pointer]:
+                    - /url: http://www.aastocks.com/sc/cnhk/news/china-hot-topic-content.aspx?catg=4&id=NOW.1523328&source=AAFN
+                    - text: 跳转
+                    - img [ref=e273]
+                - generic [ref=e276]:
+                  - generic [ref=e277]:
+                    - paragraph [ref=e278]: 港股锂电池股走强宁德时代涨近4%
+                    - paragraph [ref=e279]: 截至发稿，宁德时代(03750.HK)涨3.97%，天齐锂业(09696.HK)涨3.67%，彩客新能源(01986.HK)涨3.33%。消息方面，广期所碳酸锂期货主力合约大涨5%，报195480元/吨。
+                  - link "跳转" [ref=e280] [cursor=pointer]:
+                    - /url: https://wap.eastmoney.com/a/202605063728110894.html
+                    - text: 跳转
+                    - img [ref=e281]
+                - generic [ref=e284]:
+                  - generic [ref=e285]:
+                    - paragraph [ref=e286]: 宁德时代(03750.HK)逆市升2.6% 大摩上调H股目标价至815元
+                    - paragraph [ref=e287]: 宁德时代(03750.HK)今早(5日)高开2.93%，最高见659.5元。现报648元，升2.61%，成交234.99万股，涉资15.28亿元。 摩根士丹利表示，预计宁德时代钠离子电池及凝聚态电池下一代 ...
+                  - link "跳转" [ref=e288] [cursor=pointer]:
+                    - /url: https://www.aastocks.com/sc/stocks/analysis/stock-aafn-con/3750/HK6/NOW.1522605/hk-stock-news
+                    - text: 跳转
+                    - img [ref=e289]
+                - generic [ref=e292]:
+                  - generic [ref=e293]:
+                    - paragraph [ref=e294]: 宁德时代(03750) - 最新资讯
+                    - paragraph [ref=e295]: 里昂：宁德时代目标价820港元维持“跑赢大市”评级; 港股锂电池股走强宁德时代涨近4%; 港股锂电板块拉涨宁德时代涨近4% 国内矿源供给或进入偏紧阶段;
+                  - link "跳转" [ref=e296] [cursor=pointer]:
+                    - /url: https://xueqiu.com/S/03750/news
+                    - text: 跳转
+                    - img [ref=e297]
+            - generic [ref=e238]:
+              - generic [ref=e240]:
+                - generic [ref=e241]: 透明度
+                - heading "数据追溯" [level=3] [ref=e242]
+              - generic [ref=e243]:
+                - generic [ref=e244]: "记录 ID:"
+                - code [ref=e245]: "6"
+              - generic [ref=e246]:
+                - button "原始分析结果" [ref=e248]:
+                  - generic [ref=e249]: 原始分析结果
+                  - img [ref=e250]
+                - button "分析快照" [ref=e253]:
+                  - generic [ref=e254]: 分析快照
+                  - img [ref=e255]
+            - paragraph [ref=e257]: "分析模型: openai/deepseek-v4-flash"

@@ -49,13 +49,16 @@ class BaseDataProvider(HistoricalDataProvider):
     - 其他 HistoricalDataProvider 的抽象方法
     """
 
-    def __init__(self, caching_provider=None):
+    def __init__(self, caching_provider=None, db_repository=None):
         """初始化数据提供者
 
         Args:
             caching_provider: 可选的 CachingDataProvider 实例（方案B）。
                               提供时优先使用方案B的磁盘缓存+自动补全链路；
                               不提供时回退到方案C的 ThreeLayerCacheManager。
+            db_repository: 可选的 IBarRepository 实现（如 SqliteBarRepository）。
+                           提供时注入到 ThreeLayerCacheManager 的 DB 层，
+                           自动承担 db_fetch_func（读）和 db_save_func（写）。
         """
         if caching_provider is not None:
             # 方案B：使用 CachingDataProvider（磁盘缓存优先 + 自动补全）
@@ -66,6 +69,8 @@ class BaseDataProvider(HistoricalDataProvider):
             from infrastructure.cache import create_cache_manager
             self._cache_manager = create_cache_manager()
             self._caching_provider = None
+
+        self._db_repository = db_repository
 
         self.config_manager = ConfigManager()
         self._enable_memory_cache = True  # 启用分时数据内存缓存
@@ -103,13 +108,49 @@ class BaseDataProvider(HistoricalDataProvider):
             result_df = self._get_from_caching_provider(symbol, start_date, end_date, period)
         else:
             # 方案C（回退）：使用 ThreeLayerCacheManager
+            if self._db_repository is not None:
+                repo = self._db_repository
+                sym = symbol
+                per = period
+
+                def _db_fetch(start, end, period):
+                    if per == 'weekly':
+                        df = repo.get_weekly_bars(sym, start, end)
+                    elif per == 'monthly':
+                        df = repo.get_monthly_bars(sym, start, end)
+                    else:
+                        df = repo.get_daily_bars(sym, start, end)
+                    if df is None or df.empty:
+                        return None
+                    df = df.rename(columns={'trade_date': 'date'})
+                    if 'symbol' in df.columns:
+                        df = df.drop(columns=['symbol'])
+                    return df
+
+                def _db_save(df):
+                    df = df.copy()
+                    df = df.rename(columns={'date': 'trade_date'})
+                    if per == 'weekly':
+                        repo.save_weekly_bars(df, sym)
+                    elif per == 'monthly':
+                        repo.save_monthly_bars(df, sym)
+                    else:
+                        repo.save_daily_bars(df, sym)
+
+                db_fetch_func = _db_fetch
+                db_save_func = _db_save
+            else:
+                db_fetch_func = None
+                db_save_func = None
+
             result_df = self._cache_manager.get_data(
                 symbol=symbol,
                 from_date=start_date,
                 to_date=end_date,
                 period=period,
-                db_fetch_func=None,
+                db_fetch_func=db_fetch_func,
                 api_fetch_func=lambda s, e, period: self._fetch_from_external_api(symbol, s, e, period),
+                db_save_func=db_save_func,
                 current_time=market_local_time
             )
 

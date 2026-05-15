@@ -557,16 +557,20 @@ class EfinanceFetcher(BaseFetcher):
             '股票代码': 'code',
             '股票名称': 'name',
         }
-        
+
         # 重命名列
         df = df.rename(columns=column_mapping)
-        
+
+        # efinance 返回的成交量单位是手（100股/手），统一转为股
+        if 'volume' in df.columns:
+            df['volume'] = df['volume'] * 100
+
         # Fallback: if OHLC columns are missing (e.g. very old data path), fill from close
         if 'close' in df.columns and 'open' not in df.columns:
             df['open'] = df['close']
             df['high'] = df['close']
             df['low'] = df['close']
-            
+
         # Fill volume and amount if missing
         if 'volume' not in df.columns:
             df['volume'] = 0

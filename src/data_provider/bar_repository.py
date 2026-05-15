@@ -100,7 +100,7 @@ class SqliteBarRepository:
         calendar: ITradingCalendar | None = None,
     ) -> None:
         if db_manager is not None:
-            self._engine = db_manager._engine
+            self._engine = db_manager.engine
         elif engine is not None:
             self._engine = engine
         else:

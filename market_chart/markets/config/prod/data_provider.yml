@@ -1,0 +1,95 @@
+default_index: 000300.SH
+cache_enabled: true
+cache_ttl: 3600
+max_retries: 3
+data_providers:
+  yahoo_finance:
+    use_proxy: false
+  akshare:
+    use_proxy: false
+  tushare:
+    use_proxy: false
+  finnhub:
+    use_proxy: true
+providers:
+- id: akshare
+  name: AKShare
+  type: 免费开源
+  description: 完全免费、无调用限制的数据源（推荐）
+  status: passed
+  adapter_module: core.data.providers.akshare_provider
+  adapter_class: AKShareDataProvider
+  markets:
+  - CN
+  - HK
+  - US
+  requires_auth: false
+  rate_limit: 无限制
+  features:
+  - 实时数据
+  - 历史数据
+  - 基本面数据
+  - 宏观数据
+  installation: pip install akshare
+  last_test: '2025-12-09T08:43:19.749738'
+- id: yahoo
+  name: Yahoo Finance
+  type: 商业API
+  description: 全球市场数据源
+  status: passed
+  adapter_module: core.data.providers.yahoo_provider
+  adapter_class: YahooFinanceDataProvider
+  markets:
+  - US
+  - EU
+  - JP
+  - SG
+  requires_auth: false
+  rate_limit: 2000次/小时（可能限流）
+  features:
+  - 实时数据
+  - 历史数据
+  - 期权数据
+  installation: pip install yfinance
+  last_test: '2025-12-12T00:06:49.701765'
+- id: tushare
+  name: Tushare Pro
+  type: 社区数据
+  description: A股和港股数据源（需要注册）
+  status: untested
+  adapter_module: core.data.providers.tushare_provider
+  adapter_class: TushareDataProvider
+  markets:
+  - CN
+  - HK
+  requires_auth: true
+  auth_type: token
+  rate_limit: 200次/天（免费用户）
+  features:
+  - 历史数据
+  - 基本面数据
+  - 财务数据
+  installation: pip install tushare
+  registration: https://tushare.pro/register
+- id: finnhub
+  name: Finnhub
+  type: 商业API
+  description: 全球金融市场数据和新闻API
+  status: untested
+  adapter_module: core.data.providers.finnhub_provider
+  adapter_class: FinnhubDataProvider
+  markets:
+  - US
+  - CN
+  - EU
+  - HK
+  requires_auth: true
+  auth_type: api_key
+  rate_limit: 60次/分钟（免费版）
+  features:
+  - 实时数据
+  - 历史数据
+  - 财经新闻
+  - 社交情绪分析
+  installation: pip install finnhub-python
+  registration: https://finnhub.io/

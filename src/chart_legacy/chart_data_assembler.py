@@ -153,8 +153,7 @@ class ChartDataAssembler:
             else:
                 end_date = before - pd.Timedelta(days=1)
         else:
-            end_date = MarketTimeUtils.get_market_time_now(symbol)
-            end_date = MarketTimeUtils.to_market_time_by_symbol(end_date, symbol)
+            end_date = MarketTimeUtils.get_last_trade_date_for_symbol(symbol, market_local_time)
 
         if period == 'monthly':
             from dateutil.relativedelta import relativedelta

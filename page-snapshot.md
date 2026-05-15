@@ -1,0 +1,317 @@
+- generic [ref=e4]:
+  - complementary "桌面侧边导航" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img [ref=e9]
+        - paragraph [ref=e11]: DSA
+      - navigation "主导航" [ref=e12]:
+        - link "首页" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e14]
+          - generic [ref=e17]: 首页
+        - link "问股" [ref=e18] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e19]
+          - generic [ref=e23]: 问股
+        - link "持仓" [ref=e24] [cursor=pointer]:
+          - /url: /portfolio
+          - img [ref=e25]
+          - generic [ref=e29]: 持仓
+        - link "回测" [ref=e30] [cursor=pointer]:
+          - /url: /backtest
+          - img [ref=e32]
+          - generic [ref=e34]: 回测
+        - link "设置" [ref=e35] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e36]
+          - generic [ref=e39]: 设置
+      - button "切换主题" [ref=e42]:
+        - img [ref=e43]
+        - generic [ref=e45]: 主题
+  - main [ref=e46]:
+    - generic [ref=e47]:
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - button "AI 回测" [ref=e50]
+          - button "纯技术回测" [ref=e51]
+        - generic [ref=e235]:
+          - combobox "输入股票代码，逗号分隔（如：600519,000858）" [ref=e238]: "600519"
+          - generic [ref=e239]:
+            - generic [ref=e240]: 从
+            - textbox "开始日期" [ref=e241]: 2025-05-11
+          - generic [ref=e242]:
+            - generic [ref=e243]: 到
+            - textbox "结束日期" [ref=e244]: 2026-05-11
+          - generic [ref=e245]:
+            - generic [ref=e246]: 窗口
+            - spinbutton [ref=e247]: "10"
+          - button "加载K线" [active] [ref=e248] [cursor=pointer]
+      - main [ref=e71]:
+        - generic [ref=e72]:
+          - generic [ref=e249]:
+            - combobox [ref=e266] [cursor=pointer]:
+              - option "双均线策略" [selected]
+              - option "MACD策略"
+              - option "RSI策略"
+              - option "布林带策略"
+            - button "运行" [ref=e267] [cursor=pointer]
+          - generic [ref=e268]:
+            - generic [ref=e269] [cursor=pointer]:
+              - checkbox "隐藏内置MA线" [ref=e270]
+              - text: 隐藏内置MA线
+            - generic [ref=e271]: 图表缩放已锁定
+          - generic [ref=e272]:
+            - generic [ref=e273]: 模板
+            - combobox [ref=e274] [cursor=pointer]:
+              - option "无模板" [selected]
+            - button "加载" [disabled] [ref=e275]:
+              - img [ref=e276]
+              - text: 加载
+            - button "保存当前" [ref=e278]:
+              - img [ref=e279]
+              - text: 保存当前
+            - button "删除" [disabled] [ref=e283]:
+              - img [ref=e284]
+              - text: 删除
+          - generic [ref=e287]:
+            - generic [ref=e288]:
+              - generic [ref=e289]: 参数组
+              - generic [ref=e290]: 3/6
+            - generic [ref=e292] [cursor=pointer]:
+              - button "启用" [ref=e293]:
+                - img [ref=e294]
+              - textbox [ref=e299]: 修改后
+              - button "复制" [ref=e300]:
+                - img [ref=e301]
+              - button "删除" [ref=e304]:
+                - img [ref=e305]
+              - img [ref=e308]
+            - generic [ref=e311] [cursor=pointer]:
+              - button "禁用" [ref=e312]:
+                - img [ref=e313]
+              - textbox [ref=e316]: 参数组 2
+              - img [ref=e317]
+              - button "复制" [ref=e319]:
+                - img [ref=e320]
+              - button "删除" [ref=e323]:
+                - img [ref=e324]
+              - img [ref=e327]
+            - generic [ref=e330] [cursor=pointer]:
+              - button "禁用" [ref=e331]:
+                - img [ref=e332]
+              - textbox [ref=e335]: 修改后 (副本)
+              - button "复制" [ref=e336]:
+                - img [ref=e337]
+              - button "删除" [ref=e340]:
+                - img [ref=e341]
+              - img [ref=e344]
+            - button "添加参数组" [ref=e346]:
+              - img [ref=e347]
+              - text: 添加参数组
+        - generic [ref=e250]:
+          - generic [ref=e349]:
+            - generic [ref=e350]:
+              - generic [ref=e351]:
+                - button "日" [ref=e352] [cursor=pointer]
+                - button "周" [ref=e353] [cursor=pointer]
+                - button "月" [ref=e354] [cursor=pointer]
+              - button "筹码" [ref=e355] [cursor=pointer]
+            - generic [ref=e356]:
+              - button "VOL" [ref=e357] [cursor=pointer]
+              - button "MACD" [ref=e358] [cursor=pointer]
+              - button "RSI" [ref=e359] [cursor=pointer]
+              - button "KDJ" [ref=e360] [cursor=pointer]
+              - button "OBV" [ref=e361] [cursor=pointer]
+          - generic [ref=e366]:
+            - generic [ref=e368]:
+              - generic [ref=e369]: 批量回测结果对比
+              - generic [ref=e370]: 双均线策略 · 2 组参数 · 600519
+            - generic [ref=e371]:
+              - generic [ref=e372]:
+                - generic [ref=e373]:
+                  - generic [ref=e374]:
+                    - generic [ref=e375]: 参数组 2
+                    - generic [ref=e376]: 600519 · 600519
+                  - generic [ref=e377]:
+                    - generic [ref=e378]: 信号 16
+                    - generic [ref=e379]: 交易 8
+                    - generic [ref=e380]:
+                      - text: 策略收益
+                      - generic [ref=e381]: "-16.3%"
+                    - generic [ref=e382]:
+                      - text: 基准
+                      - generic [ref=e383]: "-12.2%"
+                - generic [ref=e389]:
+                  - generic [ref=e390]:
+                    - generic [ref=e391]:
+                      - generic [ref=e392]: 胜率
+                      - generic [ref=e393]: 25%
+                    - generic [ref=e394]:
+                      - generic [ref=e395]: 最大回撤
+                      - generic [ref=e396]: "-21.2%"
+                    - generic [ref=e397]:
+                      - generic [ref=e398]: 平均持仓
+                      - generic [ref=e399]: 20天
+                    - generic [ref=e400]:
+                      - generic [ref=e401]: 超额收益
+                      - generic [ref=e402]: "-4.1%"
+                  - table [ref=e404]:
+                    - rowgroup [ref=e405]:
+                      - row "买入日 买入价 卖出日 卖出价 收益率 持仓" [ref=e406]:
+                        - columnheader "买入日" [ref=e407]
+                        - columnheader "买入价" [ref=e408]
+                        - columnheader "卖出日" [ref=e409]
+                        - columnheader "卖出价" [ref=e410]
+                        - columnheader "收益率" [ref=e411]
+                        - columnheader "持仓" [ref=e412]
+                    - rowgroup [ref=e413]:
+                      - row "2025-07-08 1386.75 2025-08-04 1391.04 +0.0% 27天" [ref=e414]:
+                        - cell "2025-07-08" [ref=e415]
+                        - cell "1386.75" [ref=e416]
+                        - cell "2025-08-04" [ref=e417]
+                        - cell "1391.04" [ref=e418]
+                        - cell "+0.0%" [ref=e419]
+                        - cell "27天" [ref=e420]
+                      - row "2025-08-22 1424.92 2025-09-23 1426.54 +0.0% 32天" [ref=e421]:
+                        - cell "2025-08-22" [ref=e422]
+                        - cell "1424.92" [ref=e423]
+                        - cell "2025-09-23" [ref=e424]
+                        - cell "1426.54" [ref=e425]
+                        - cell "+0.0%" [ref=e426]
+                        - cell "32天" [ref=e427]
+                      - row "2025-10-21 1435.04 2025-10-30 1397.85 -0.0% 9天" [ref=e428]:
+                        - cell "2025-10-21" [ref=e429]
+                        - cell "1435.04" [ref=e430]
+                        - cell "2025-10-30" [ref=e431]
+                        - cell "1397.85" [ref=e432]
+                        - cell "-0.0%" [ref=e433]
+                        - cell "9天" [ref=e434]
+                      - row "2025-11-13 1438.16 2025-11-28 1422.54 -0.0% 15天" [ref=e435]:
+                        - cell "2025-11-13" [ref=e436]
+                        - cell "1438.16" [ref=e437]
+                        - cell "2025-11-28" [ref=e438]
+                        - cell "1422.54" [ref=e439]
+                        - cell "-0.0%" [ref=e440]
+                        - cell "15天" [ref=e441]
+                      - row "2025-12-23 1408.26 2026-01-16 1395.00 -0.0% 24天" [ref=e442]:
+                        - cell "2025-12-23" [ref=e443]
+                        - cell "1408.26" [ref=e444]
+                        - cell "2026-01-16" [ref=e445]
+                        - cell "1395.00" [ref=e446]
+                        - cell "-0.0%" [ref=e447]
+                        - cell "24天" [ref=e448]
+                      - row "2026-02-04 1485.00 2026-03-04 1415.00 -0.0% 28天" [ref=e449]:
+                        - cell "2026-02-04" [ref=e450]
+                        - cell "1485.00" [ref=e451]
+                        - cell "2026-03-04" [ref=e452]
+                        - cell "1415.00" [ref=e453]
+                        - cell "-0.0%" [ref=e454]
+                        - cell "28天" [ref=e455]
+                      - row "2026-03-19 1472.96 2026-03-26 1409.00 -0.0% 7天" [ref=e456]:
+                        - cell "2026-03-19" [ref=e457]
+                        - cell "1472.96" [ref=e458]
+                        - cell "2026-03-26" [ref=e459]
+                        - cell "1409.00" [ref=e460]
+                        - cell "-0.0%" [ref=e461]
+                        - cell "7天" [ref=e462]
+                      - row "2026-04-02 1459.44 2026-04-22 1415.00 -0.0% 20天" [ref=e463]:
+                        - cell "2026-04-02" [ref=e464]
+                        - cell "1459.44" [ref=e465]
+                        - cell "2026-04-22" [ref=e466]
+                        - cell "1415.00" [ref=e467]
+                        - cell "-0.0%" [ref=e468]
+                        - cell "20天" [ref=e469]
+              - generic [ref=e470]:
+                - generic [ref=e471]:
+                  - generic [ref=e472]:
+                    - generic [ref=e473]: 修改后 (副本)
+                    - generic [ref=e474]: 600519 · 600519
+                  - generic [ref=e475]:
+                    - generic [ref=e476]: 信号 16
+                    - generic [ref=e477]: 交易 8
+                    - generic [ref=e478]:
+                      - text: 策略收益
+                      - generic [ref=e479]: "-16.3%"
+                    - generic [ref=e480]:
+                      - text: 基准
+                      - generic [ref=e481]: "-12.2%"
+                - generic [ref=e487]:
+                  - generic [ref=e488]:
+                    - generic [ref=e489]:
+                      - generic [ref=e490]: 胜率
+                      - generic [ref=e491]: 25%
+                    - generic [ref=e492]:
+                      - generic [ref=e493]: 最大回撤
+                      - generic [ref=e494]: "-21.2%"
+                    - generic [ref=e495]:
+                      - generic [ref=e496]: 平均持仓
+                      - generic [ref=e497]: 20天
+                    - generic [ref=e498]:
+                      - generic [ref=e499]: 超额收益
+                      - generic [ref=e500]: "-4.1%"
+                  - table [ref=e502]:
+                    - rowgroup [ref=e503]:
+                      - row "买入日 买入价 卖出日 卖出价 收益率 持仓" [ref=e504]:
+                        - columnheader "买入日" [ref=e505]
+                        - columnheader "买入价" [ref=e506]
+                        - columnheader "卖出日" [ref=e507]
+                        - columnheader "卖出价" [ref=e508]
+                        - columnheader "收益率" [ref=e509]
+                        - columnheader "持仓" [ref=e510]
+                    - rowgroup [ref=e511]:
+                      - row "2025-07-08 1386.75 2025-08-04 1391.04 +0.0% 27天" [ref=e512]:
+                        - cell "2025-07-08" [ref=e513]
+                        - cell "1386.75" [ref=e514]
+                        - cell "2025-08-04" [ref=e515]
+                        - cell "1391.04" [ref=e516]
+                        - cell "+0.0%" [ref=e517]
+                        - cell "27天" [ref=e518]
+                      - row "2025-08-22 1424.92 2025-09-23 1426.54 +0.0% 32天" [ref=e519]:
+                        - cell "2025-08-22" [ref=e520]
+                        - cell "1424.92" [ref=e521]
+                        - cell "2025-09-23" [ref=e522]
+                        - cell "1426.54" [ref=e523]
+                        - cell "+0.0%" [ref=e524]
+                        - cell "32天" [ref=e525]
+                      - row "2025-10-21 1435.04 2025-10-30 1397.85 -0.0% 9天" [ref=e526]:
+                        - cell "2025-10-21" [ref=e527]
+                        - cell "1435.04" [ref=e528]
+                        - cell "2025-10-30" [ref=e529]
+                        - cell "1397.85" [ref=e530]
+                        - cell "-0.0%" [ref=e531]
+                        - cell "9天" [ref=e532]
+                      - row "2025-11-13 1438.16 2025-11-28 1422.54 -0.0% 15天" [ref=e533]:
+                        - cell "2025-11-13" [ref=e534]
+                        - cell "1438.16" [ref=e535]
+                        - cell "2025-11-28" [ref=e536]
+                        - cell "1422.54" [ref=e537]
+                        - cell "-0.0%" [ref=e538]
+                        - cell "15天" [ref=e539]
+                      - row "2025-12-23 1408.26 2026-01-16 1395.00 -0.0% 24天" [ref=e540]:
+                        - cell "2025-12-23" [ref=e541]
+                        - cell "1408.26" [ref=e542]
+                        - cell "2026-01-16" [ref=e543]
+                        - cell "1395.00" [ref=e544]
+                        - cell "-0.0%" [ref=e545]
+                        - cell "24天" [ref=e546]
+                      - row "2026-02-04 1485.00 2026-03-04 1415.00 -0.0% 28天" [ref=e547]:
+                        - cell "2026-02-04" [ref=e548]
+                        - cell "1485.00" [ref=e549]
+                        - cell "2026-03-04" [ref=e550]
+                        - cell "1415.00" [ref=e551]
+                        - cell "-0.0%" [ref=e552]
+                        - cell "28天" [ref=e553]
+                      - row "2026-03-19 1472.96 2026-03-26 1409.00 -0.0% 7天" [ref=e554]:
+                        - cell "2026-03-19" [ref=e555]
+                        - cell "1472.96" [ref=e556]
+                        - cell "2026-03-26" [ref=e557]
+                        - cell "1409.00" [ref=e558]
+                        - cell "-0.0%" [ref=e559]
+                        - cell "7天" [ref=e560]
+                      - row "2026-04-02 1459.44 2026-04-22 1415.00 -0.0% 20天" [ref=e561]:
+                        - cell "2026-04-02" [ref=e562]
+                        - cell "1459.44" [ref=e563]
+                        - cell "2026-04-22" [ref=e564]
+                        - cell "1415.00" [ref=e565]
+                        - cell "-0.0%" [ref=e566]
+                        - cell "20天" [ref=e567]

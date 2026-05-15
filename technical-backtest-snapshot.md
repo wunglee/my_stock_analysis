@@ -1,0 +1,51 @@
+- generic [ref=e4]:
+  - complementary "桌面侧边导航" [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img [ref=e9]
+        - paragraph [ref=e11]: DSA
+      - navigation "主导航" [ref=e12]:
+        - link "首页" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e14]
+          - generic [ref=e17]: 首页
+        - link "问股" [ref=e18] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e19]
+          - generic [ref=e23]: 问股
+        - link "持仓" [ref=e24] [cursor=pointer]:
+          - /url: /portfolio
+          - img [ref=e25]
+          - generic [ref=e29]: 持仓
+        - link "回测" [ref=e30] [cursor=pointer]:
+          - /url: /backtest
+          - img [ref=e32]
+          - generic [ref=e34]: 回测
+        - link "设置" [ref=e35] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e36]
+          - generic [ref=e39]: 设置
+      - button "切换主题" [ref=e42]:
+        - img [ref=e43]
+        - generic [ref=e45]: 主题
+  - main [ref=e46]:
+    - generic [ref=e47]:
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - button "AI 回测" [ref=e50]
+          - button "纯技术回测" [active] [ref=e51]
+        - generic [ref=e235]:
+          - combobox "输入股票代码，逗号分隔（如：600519,000858）" [ref=e238]
+          - generic [ref=e239]:
+            - generic [ref=e240]: 从
+            - textbox "开始日期" [ref=e241]: 2025-05-13
+          - generic [ref=e242]:
+            - generic [ref=e243]: 到
+            - textbox "结束日期" [ref=e244]: 2026-05-13
+          - button "加载K线" [disabled] [ref=e245]
+      - main [ref=e71]:
+        - generic [ref=e246]: 请先加载K线数据
+        - generic [ref=e249]:
+          - img [ref=e251]
+          - heading "等待运行" [level=3] [ref=e253]
+          - paragraph [ref=e254]: 选择策略、配置参数组，点击运行批量回测。

@@ -1,0 +1,353 @@
+market_sources:
+  CN: akshare
+  EU: yahoo
+  HK: yahoo
+  JP: yahoo
+  SG: yahoo
+  US: yahoo
+market_registry:
+  CN:
+    name: 中国A股
+    display_name: 中国 A股
+    icon: 🇨🇳
+    currency: CNY
+    timezone: Asia/Shanghai
+    trading_hours: 09:30-11:30,13:00-15:00
+    settlement_days: 1
+    regulatory_body: CSRC
+    market_cap_category: emerging
+    default_trading_days: 245
+  US:
+    name: 美国股市
+    display_name: 美国
+    icon: 🇺🇸
+    currency: USD
+    timezone: America/New_York
+    trading_hours: 09:30-16:00
+    after_hours: 16:00-20:00
+    pre_market: 04:00-09:30
+    settlement_days: 2
+    regulatory_body: SEC
+    market_cap_category: developed
+    default_trading_days: 252
+  HK:
+    name: 香港股市
+    display_name: 香港
+    icon: 🇭🇰
+    currency: HKD
+    timezone: Asia/Hong_Kong
+    trading_hours: 09:30-12:00,13:00-16:00
+    pre_market: 09:00-09:30
+    settlement_days: 2
+    regulatory_body: SFC
+    market_cap_category: developed
+    default_trading_days: 247
+  JP:
+    name: 日本股市
+    display_name: 日本
+    icon: 🇯🇵
+    currency: JPY
+    timezone: Asia/Tokyo
+    trading_hours: 09:00-11:30,12:30-15:00
+    settlement_days: 2
+    regulatory_body: FSA
+    market_cap_category: developed
+    default_trading_days: 245
+  EU:
+    name: 欧洲股市
+    display_name: 欧洲
+    icon: 🇪🇺
+    currency: EUR
+    timezone: Europe/Paris
+    trading_hours: 09:00-16:30
+    settlement_days: 2
+    regulatory_body: ESMA
+    market_cap_category: developed
+    default_trading_days: 255
+  SG:
+    name: 新加坡股市
+    display_name: 新加坡
+    icon: 🇸🇬
+    currency: SGD
+    timezone: Asia/Singapore
+    trading_hours: 09:00-12:00,13:00-17:00
+    settlement_days: 2
+    regulatory_body: MAS
+    market_cap_category: developed
+    default_trading_days: 250
+market_limit:
+  CN:
+    description: A股市场特定限额
+    regulatory_framework: CSRC
+    single_stock_max_weight: 0.1
+    leverage_max: 1.0
+    margin_account_leverage_max: 2.0
+    daily_turnover_limit: 0.15
+    limit_down_exposure_max: 0.1
+    创业板_stock_max_weight: 0.08
+    科创板_stock_max_weight: 0.08
+    sector_max_weight: 0.3
+    concentration_top10: 0.6
+    st_stock_max_weight: 0.05
+  US:
+    description: 美股市场特定限额
+    regulatory_framework: SEC/FINRA
+    single_stock_max_weight: 0.15
+    sector_max_weight: 0.4
+    leverage_max: 4.0
+    day_trading_min_equity: 25000
+    pattern_day_trader_limit: 4.0
+    concentration_top10: 0.7
+    otc_stock_max_weight: 0.05
+    penny_stock_max_weight: 0.03
+  HK:
+    description: 港股市场特定限额
+    regulatory_framework: SFC
+    single_stock_max_weight: 0.1
+    sector_max_weight: 0.3
+    leverage_max: 2.0
+    concentration_top10: 0.6
+    mainland_stock_max_weight: 0.1
+    small_cap_max_weight: 0.05
+  EU:
+    description: 欧洲市场特定限额
+    regulatory_framework: ESMA
+    single_stock_max_weight: 0.12
+    sector_max_weight: 0.35
+    leverage_max: 3.0
+    concentration_top10: 0.65
+  JP:
+    description: 日本市场特定限额
+    regulatory_framework: JFSA
+    single_stock_max_weight: 0.12
+    sector_max_weight: 0.35
+    leverage_max: 3.0
+    concentration_top10: 0.65
+  SG:
+    description: 新加坡市场特定限额
+    regulatory_framework: MAS
+    single_stock_max_weight: 0.1
+    sector_max_weight: 0.3
+    leverage_max: 2.5
+    concentration_top10: 0.6
+trading_hours:
+  CN:
+    description: A股交易时段
+    timezone: Asia/Shanghai
+    open: 09:30
+    close: '15:00'
+    lunch_start: '11:30'
+    lunch_end: '13:00'
+  HK:
+    description: 港股交易时段
+    timezone: Asia/Hong_Kong
+    open: 09:30
+    close: '16:00'
+    lunch_start: '12:00'
+    lunch_end: '13:00'
+  US:
+    description: 美股交易时段
+    timezone: America/New_York
+    open: 09:30
+    close: '16:00'
+  EU:
+    description: 欧洲交易时段
+    timezone: Europe/London
+    open: 08:00
+    close: '16:30'
+  JP:
+    description: 日本交易时段
+    timezone: Asia/Tokyo
+    open: 09:00
+    close: '15:00'
+    lunch_start: '11:30'
+    lunch_end: '12:30'
+  SG:
+    description: 新加坡交易时段
+    timezone: Asia/Singapore
+    open: 09:00
+    close: '17:00'
+    lunch_start: '12:00'
+    lunch_end: '13:00'
+default_indices:
+  CN:
+  - code: ^000001.SH
+    name: 上证指数
+    type: index
+  - code: ^000300.SH
+    name: 沪深300
+    type: index
+  - code: ^000016.SH
+    name: 上证50
+    type: index
+  - code: ^399001.SZ
+    name: 深证成指
+    type: index
+  - code: ^399006.SZ
+    name: 创业板指
+    type: index
+  - code: ^000688.SH
+    name: 科创50
+    type: index
+  - code: ^000905.SH
+    name: 中证500
+    type: index
+  - code: ^000852.SH
+    name: 中证1000
+    type: index
+  - code: ^399005.SZ
+    name: 中小板指
+    type: index
+  - code: 600036.SH
+    name: 招商银行
+    type: Stock
+  US:
+  - code: ^GSPC.US
+    name: S&P 500
+    type: index
+  - code: ^DJI.US
+    name: 道琼斯工业平均指数
+    type: index
+  - code: ^IXIC.US
+    name: 纳斯达克综合指数
+    type: index
+  - code: ^RUT.US
+    name: 罗素2000
+    type: index
+  - code: ^VIX.US
+    name: VIX恐慌指数
+    type: index
+  - code: AAPL.US
+    name: 苹果公司
+    type: stock
+  - code: MSFT.US
+    name: 微软公司
+    type: stock
+  - code: GOOGL.US
+    name: 谷歌
+    type: stock
+  - code: AMZN.US
+    name: 亚马逊
+    type: stock
+  - code: TSLA.US
+    name: 特斯拉
+    type: stock
+  HK:
+  - code: ^HSI.HK
+    name: 恒生指数
+    type: index
+  - code: ^HSCE.HK
+    name: 恒生中国企业指数
+    type: index
+  - code: ^HSCCI.HK
+    name: 恒生综合指数
+    type: index
+  - code: 0700.HK
+    name: 腾讯控股
+    type: stock
+  - code: 0939.HK
+    name: 建设银行
+    type: stock
+  - code: 1299.HK
+    name: 友邦保险
+    type: stock
+  - code: 0005.HK
+    name: 汇丰控股
+    type: stock
+  - code: 0941.HK
+    name: 中国移动
+    type: stock
+  - code: 0388.HK
+    name: 香港交易所
+    type: stock
+  - code: 2318.HK
+    name: 中国平安
+    type: stock
+  JP:
+  - code: ^N225.JP
+    name: 日经225指数
+    type: index
+  - code: ^TOPX.JP
+    name: 东证股价指数
+    type: index
+  - code: 7203.JP
+    name: 丰田汽车
+    type: stock
+  - code: 9984.JP
+    name: 软银集团
+    type: stock
+  - code: 9433.JP
+    name: KDDI
+    type: stock
+  - code: 6758.JP
+    name: 索尼集团
+    type: stock
+  - code: 8306.JP
+    name: 三菱UFJ金融集团
+    type: stock
+  - code: 9432.JP
+    name: 日本电信电话
+    type: stock
+  EU:
+  - code: ^FTSE.EU
+    name: 英国富时100指数
+    type: index
+  - code: HSBA.L.EU
+    name: 汇丰控股
+    type: stock
+  SG:
+  - code: ^STI.SG
+    name: 新加坡海峡时报指数
+    type: index
+  - code: D05.SG
+    name: 星展集团
+    type: stock
+  - code: O39.SG
+    name: 华侨银行
+    type: stock
+  - code: U11.SG
+    name: 大华银行
+    type: stock
+  - code: Z74.SG
+    name: 新加坡电信
+    type: stock
+  - code: C09.SG
+    name: 城市发展
+    type: stock
+market_mechanisms:
+  CN:
+    has_limit_up_down: true
+    limit_thresholds:
+      main_board: 0.1
+      gem: 0.2
+      st: 0.05
+      kcb: 0.2
+    price_limit: 0.1
+    halt_risk_factor: 0.15
+    consecutive_limit_days_p95: 3
+  US:
+    has_limit_up_down: false
+    circuit_breaker_levels:
+    - 0.07
+    - 0.13
+    - 0.2
+    luld_threshold: 0.05
+    luld_window: 5
+    price_limit: null
+    halt_risk_factor: 0.05
+  HK:
+    has_limit_up_down: false
+    price_limit: null
+    halt_risk_factor: 0.1
+  JP:
+    has_limit_up_down: false
+    price_limit: null
+    halt_risk_factor: 0.06
+  EU:
+    has_limit_up_down: false
+    price_limit: null
+    halt_risk_factor: 0.07
+  SG:
+    has_limit_up_down: false
+    price_limit: null
+    halt_risk_factor: 0.08

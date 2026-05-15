@@ -1,0 +1,33 @@
+import { lazy, Suspense } from 'react'
+import { Routes, Route } from 'react-router-dom'
+import Layout from './components/Layout.tsx'
+import ExplorerPage from './pages/ExplorerPage.tsx'
+
+const ProvidersPage = lazy(() => import('./pages/ProvidersPage.tsx'))
+
+function App() {
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/" element={<ExplorerPage />} />
+        <Route path="/explorer" element={<ExplorerPage />} />
+        <Route
+          path="/providers"
+          element={
+            <Suspense
+              fallback={
+                <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-gray-400)' }}>
+                  加载中...
+                </div>
+              }
+            >
+              <ProvidersPage />
+            </Suspense>
+          }
+        />
+      </Routes>
+    </Layout>
+  )
+}
+
+export default App

@@ -462,6 +462,10 @@ class AkshareFetcher(BaseFetcher):
                 if 'date' in df.columns:
                     df = df.rename(columns={'date': '日期'})
 
+                # ak.stock_zh_a_daily (新浪) 返回的成交量单位是手，统一转为股
+                if 'volume' in df.columns:
+                    df['volume'] = df['volume'] * 100
+
                 # 映射其他列以匹配 _normalize_data 的期望
                 # _normalize_data 期望：日期, 开盘, 收盘, 最高, 最低, 成交量, 成交额
                 rename_map = {

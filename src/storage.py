@@ -698,6 +698,13 @@ class DatabaseManager:
         # 注册退出钩子，确保程序退出时关闭数据库连接
         atexit.register(DatabaseManager._cleanup_engine, self._engine)
     
+    @property
+    def engine(self):
+        """公开的 SQLAlchemy Engine（只读）"""
+        if not hasattr(self, '_engine'):
+            raise RuntimeError("DatabaseManager 未完成初始化，_engine 不可用")
+        return self._engine
+
     @classmethod
     def get_instance(cls) -> 'DatabaseManager':
         """获取单例实例"""

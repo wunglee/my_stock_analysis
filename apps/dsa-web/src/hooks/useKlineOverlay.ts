@@ -164,6 +164,7 @@ export function useKlineOverlay(options: UseKlineOverlayOptions): UseKlineOverla
         syncToChart();
 
         // finished 事件：kline_chart.js 通过 setOption 清除 overlay 后自动恢复
+        // 同时检测 overlay 数据长度是否与当前 xAxis 对齐（lazyUpdate 可能导致 onDataZoom 错过重建）
         const onFinished = () => {
           const gid = activeGroupIdRef.current;
           if (!gid) return;
@@ -172,8 +173,20 @@ export function useKlineOverlay(options: UseKlineOverlayOptions): UseKlineOverla
 
           const series = chart.getOption().series as Array<{ name?: string }>;
           const firstDefName = cached.seriesDefs[0].name;
-          if (!series.some((s) => s.name === firstDefName)) {
+          const overlayExists = series.some((s) => s.name === firstDefName);
+
+          // 检测 xAxis 长度是否与 overlay 数据对齐
+          const xAxisData = (chart.getOption() as any)?.xAxis?.[0]?.data;
+          const xAxisLen = xAxisData?.length ?? 0;
+          const overlayLen = cached.seriesDefs[0]?.data?.length ?? 0;
+          const isAligned = xAxisLen === 0 || overlayLen === xAxisLen;
+
+          if (!overlayExists) {
             atomicSwapOverlay(chart, cached.seriesDefs);
+          } else if (!isAligned) {
+            // 数据长度不对齐（通常是 lazyUpdate 加载更多历史数据后），清除缓存让 syncToChart 重建
+            overlayCache.current.delete(gid);
+            syncToChart();
           }
         };
         chart.on('finished', onFinished);

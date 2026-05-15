@@ -72,6 +72,7 @@ class ThreeLayerCacheManager:
             market_code: Optional[MarketCode] = None,
             db_fetch_func: Callable[..., pd.DataFrame] = None,
             api_fetch_func: Callable[..., pd.DataFrame] = None,
+            db_save_func: Callable[..., None] = None,
             current_time: pd.Timestamp = None
     ) -> pd.DataFrame:
         """
@@ -99,6 +100,7 @@ class ThreeLayerCacheManager:
             market_code: 市场代码枚举 (MarketCode.CN/US/HK/JP/EU/SG)，用于交易日历判断，如为None则从 symbol 推断
             db_fetch_func: 数据库查询函数，签名为 func(start_date, end_date, period) -> DataFrame
             api_fetch_func: API查询函数，签名为 func(start_date, end_date, period) -> DataFrame
+            db_save_func: 数据库回存函数，签名为 func(df) -> None。在 API 拉取成功后调用，用于将数据持久化到 DB 层
             current_time:当前时间
         Returns:
             完整的 DataFrame
@@ -162,6 +164,8 @@ class ThreeLayerCacheManager:
 
                         self._window_cache.distribute_data_to_windows(symbol, period, api_df, range_windows,
                                                                       cached_windows, from_date, market_code)
+                        if db_save_func:
+                            db_save_func(api_df)
                     else:
                         logger.warning(
                             f"⚠️ API无数据: {range_start.strftime('%Y-%m-%d')} ~ {range_end.strftime('%Y-%m-%d')}，标记 {len(range_windows)} 个空窗口")

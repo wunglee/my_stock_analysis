@@ -78,7 +78,5 @@ verify_*.py
 static/
 /apps/dsa-desktop/dist/
 /apps/dsa-desktop/node_modules/
-/market_chart/
-/market_chart/
 /.playwright-mcp/
 /temp/

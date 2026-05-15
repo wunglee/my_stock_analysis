@@ -730,7 +730,9 @@ export function hideBuiltinMA(chart: any): void {
 
 /** 移除所有 __overlay_ 前缀的 series（焦点离开参数组时调用） */
 export function clearOverlays(chart: any): void {
-  const currentSeries = chart.getOption().series as Array<{ name?: string }>;
+  const option = chart.getOption();
+  if (!option || !option.series) return;
+  const currentSeries = option.series as Array<{ name?: string }>;
   const nonOverlay = currentSeries.filter(
     (s) => !(typeof s.name === 'string' && s.name.startsWith('__overlay_')),
   );
@@ -751,6 +753,7 @@ export function restoreBuiltinMA(chart: any): void {
 
 export function detectKlineLengthChange(chart: any, lastLength: number): number | null {
   const option = chart.getOption();
+  if (!option) return null;
   const xAxis0 = option.xAxis as Array<{ data?: unknown[] }> | undefined;
   if (!xAxis0?.[0]?.data) return null;
   const currentLength = xAxis0[0].data.length;

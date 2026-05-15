@@ -1,0 +1,73 @@
+# 市场特定限额配置
+market_limit:
+  CN:
+    description: 'A股市场特定限额'
+    regulatory_framework: 'CSRC'
+    # 监管明确要求
+    single_stock_max_weight: 0.10
+    leverage_max: 1.0
+    margin_account_leverage_max: 2.0
+    # 专家建议调整
+    daily_turnover_limit: 0.15
+    limit_down_exposure_max: 0.10
+    # 专家新增建议
+    创业板_stock_max_weight: 0.08
+    科创板_stock_max_weight: 0.08
+    # 行业惯例
+    sector_max_weight: 0.30
+    concentration_top10: 0.60
+    st_stock_max_weight: 0.05
+
+  US:
+    description: '美股市场特定限额'
+    regulatory_framework: 'SEC/FINRA'
+    single_stock_max_weight: 0.15
+    sector_max_weight: 0.40
+    leverage_max: 4.0
+    # PDT规则
+    day_trading_min_equity: 25000
+    pattern_day_trader_limit: 4.0
+    concentration_top10: 0.70
+    otc_stock_max_weight: 0.05
+    penny_stock_max_weight: 0.03
+
+  HK:
+    description: '港股市场特定限额'
+    regulatory_framework: 'SFC'
+    single_stock_max_weight: 0.10
+    sector_max_weight: 0.30
+    leverage_max: 2.0
+    concentration_top10: 0.60
+    mainland_stock_max_weight: 0.10
+    small_cap_max_weight: 0.05
+
+  EU:
+    description: '欧洲市场特定限额'
+    regulatory_framework: 'ESMA'
+    single_stock_max_weight: 0.12
+    sector_max_weight: 0.35
+    leverage_max: 3.0
+    concentration_top10: 0.65
+
+  JP:
+    description: '日本市场特定限额'
+    regulatory_framework: 'JFSA'
+    single_stock_max_weight: 0.12
+    sector_max_weight: 0.35
+    leverage_max: 3.0
+    concentration_top10: 0.65
+
+  SG:
+    description: '新加坡市场特定限额'
+    regulatory_framework: 'MAS'
+    single_stock_max_weight: 0.10
+    sector_max_weight: 0.30
+    leverage_max: 2.5
+    concentration_top10: 0.60
+market_sources:
+  CN: akshare
+  EU: yahoo
+  HK: akshare
+  JP: yahoo
+  SG: yahoo
+  US: yahoo

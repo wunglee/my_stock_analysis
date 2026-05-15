@@ -83,6 +83,13 @@ class MarketTimeUtils:
         return date_time.tz_convert(market_tz)
 
     @staticmethod
+    def get_last_trade_date_for_symbol(symbol: str, market_local_time: pd.Timestamp) -> pd.Timestamp:
+        """通过 symbol 获取最后一个交易日（便捷方法）"""
+        market = _detect_market(symbol)
+        market_code = MarketCode.parse(market)
+        return MarketTimeUtils.get_last_trade_date(market_code, market_local_time)
+
+    @staticmethod
     def to_market_time_by_symbol(date_time: pd.Timestamp, symbol: str) -> pd.Timestamp:
         """确保时间戳带有正确的市场时区（通过 symbol 推断）"""
         market = _detect_market(symbol)
@@ -91,13 +98,30 @@ class MarketTimeUtils:
 
     @staticmethod
     def get_last_trade_date(market: MarketCode, market_local_time: pd.Timestamp) -> pd.Timestamp:
-        """简化版：返回前一个工作日"""
+        """返回最后一个完整交易日（用于历史K线查询的上界）
+
+        规则：
+        - 盘前 → 前一工作日
+        - 盘中/午盘/盘后：若今天是工作日 → 今天，否则 → 前一工作日
+        """
+        from src.chart_legacy.market_enums import TradingPhase
+
         if market_local_time.tzinfo is None:
             market_local_time = MarketTimeUtils.to_market_time(market_local_time, market)
         date = market_local_time.normalize()
+        trading_phase = MarketTimeUtils.determine_trading_phase(market, market_local_time)
+
+        if trading_phase == TradingPhase.BEFORE_OPEN:
+            weekday = date.weekday()
+            if weekday == 0:
+                return date - pd.Timedelta(days=3)
+            elif weekday == 6:
+                return date - pd.Timedelta(days=2)
+            return date - pd.Timedelta(days=1)
+
         weekday = date.weekday()
-        if weekday == 0:  # 周一
-            return date - pd.Timedelta(days=3)
-        elif weekday == 6:  # 周日
+        if weekday == 5:
+            return date - pd.Timedelta(days=1)
+        elif weekday == 6:
             return date - pd.Timedelta(days=2)
-        return date - pd.Timedelta(days=1)
+        return date
