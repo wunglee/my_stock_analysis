@@ -26,15 +26,13 @@ from src.chart_legacy.indicator_service import TechnicalIndicators
 from src.chart_legacy.market_time_utils import MarketTimeUtils
 from src.data_provider.bar_repository import SqliteBarRepository
 from src.data_provider.trading_calendar_adapter import XCalTradingCalendar
-from src.history_provider import (
-    MemoryCacheProvider,
-    DbProvider,
-    ExternalApiProvider,
-    MultiSourceProvider,
-    ThreeLayerProvider,
-)
+from core.data.history_provider.memory_provider import MemoryCacheProvider
+from core.data.history_provider.db_provider import DbProvider
+from core.data.history_provider.external_provider import ExternalApiProvider
+from core.data.history_provider.multi_source import MultiSourceProvider
+from core.data.history_provider.three_layer import ThreeLayerProvider
 from src.history_provider.adapter import HistoryProviderAdapter, DataFetcherManagerQuoteFetcher
-from src.realtime_provider import IntradayProvider
+from core.data.realtime_provider import IntradayProvider
 from src.storage import DatabaseManager
 
 logger = logging.getLogger(__name__)

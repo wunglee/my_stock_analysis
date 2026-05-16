@@ -230,13 +230,21 @@ class ThreeLayerProvider:
         if not trading_days:
             return []
 
-        # 2. 已覆盖的日期（统一为 date 对象比较）
-        existing_dates = set(pd.to_datetime(df["trade_date"]).dt.normalize())
+        # 辅助：统一转为 tz-naive Timestamp（避免 tz-aware vs tz-naive 比较报错）
+        # 与迁移前 window_cache.py / trading_calendar_service.py 保持一致：用 tz_localize(None) 剥离时区
+        def _to_naive(ts):
+            ts = pd.to_datetime(ts)
+            if ts.tz is not None:
+                ts = ts.tz_localize(None)
+            return ts.normalize()
+
+        # 2. 已覆盖的日期（统一为 tz-naive Timestamp 比较）
+        existing_dates = set(_to_naive(d) for d in df["trade_date"])
 
         # 3. 缺失交易日
         missing_days = [
             d for d in trading_days
-            if pd.to_datetime(d).normalize() not in existing_dates
+            if _to_naive(d) not in existing_dates
         ]
         if not missing_days:
             return []
@@ -244,10 +252,10 @@ class ThreeLayerProvider:
         # 4. 排除上市前日期
         earliest = self._memory.get_earliest_date(symbol)
         if earliest is not None:
-            earliest_norm = pd.to_datetime(earliest).normalize()
+            earliest_norm = _to_naive(earliest)
             missing_days = [
                 d for d in missing_days
-                if pd.to_datetime(d).normalize() >= earliest_norm
+                if _to_naive(d) >= earliest_norm
             ]
 
         if not missing_days:
@@ -265,22 +273,22 @@ class ThreeLayerProvider:
                 # 日历异常时，按自然日判断连续性
                 expected_next = range_end + pd.Timedelta(days=1)
 
-            day_ts = pd.to_datetime(day).normalize()
-            expected_ts = pd.to_datetime(expected_next).normalize()
+            day_ts = _to_naive(day)
+            expected_ts = _to_naive(expected_next)
 
             if day_ts == expected_ts:
                 range_end = day
             else:
                 ranges.append((
-                    pd.to_datetime(range_start).normalize(),
-                    pd.to_datetime(range_end).normalize(),
+                    _to_naive(range_start),
+                    _to_naive(range_end),
                 ))
                 range_start = day
                 range_end = day
 
         ranges.append((
-            pd.to_datetime(range_start).normalize(),
-            pd.to_datetime(range_end).normalize(),
+            _to_naive(range_start),
+            _to_naive(range_end),
         ))
         return ranges
 

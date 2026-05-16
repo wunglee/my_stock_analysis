@@ -21,9 +21,9 @@ from src.chart_legacy.market_time_utils import MarketTimeUtils
 from src.chart_legacy.market_utils import MarketUtils
 
 if TYPE_CHECKING:
-    from .interface import IDataProvider
-    from src.realtime_provider import IntradayProvider, RealtimeKlineProvider
-    from src.realtime_provider.interface import IQuoteFetcher
+    from core.data.history_provider.interface import IDataProvider
+    from core.data.realtime_provider import IntradayProvider, RealtimeKlineProvider
+    from core.data.realtime_provider.interface import IQuoteFetcher
 
 
 class DataFetcherManagerQuoteFetcher:
@@ -166,7 +166,7 @@ class HistoryProviderAdapter:
         """
         if self._realtime_kline_provider is None:
             from data_provider.base import DataFetcherManager
-            from src.realtime_provider import RealtimeKlineProvider
+            from core.data.realtime_provider import RealtimeKlineProvider
 
             fetcher_mgr = DataFetcherManager()
             quote_fetcher = DataFetcherManagerQuoteFetcher(fetcher_mgr)

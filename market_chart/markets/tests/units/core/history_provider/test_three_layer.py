@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, call
 import pytest
 import pandas as pd
 
-from ..three_layer import ThreeLayerProvider
-from ..memory_provider import MemoryCacheProvider
+from core.data.history_provider.three_layer import ThreeLayerProvider
+from core.data.history_provider.memory_provider import MemoryCacheProvider
 
 
 class TestThreeLayerProvider:

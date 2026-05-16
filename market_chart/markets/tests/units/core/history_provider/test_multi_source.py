@@ -7,8 +7,8 @@ MultiSourceProvider 单元测试
 import pytest
 import pandas as pd
 
-from ..multi_source import MultiSourceProvider
-from ..external_provider import ExternalApiProvider
+from core.data.history_provider.multi_source import MultiSourceProvider
+from core.data.history_provider.external_provider import ExternalApiProvider
 
 
 class TestMultiSourceProvider:

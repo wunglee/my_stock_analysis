@@ -104,13 +104,11 @@ class StockService:
         """
         try:
             # 使用新的 history_provider 体系获取数据
-            from src.history_provider import (
-                MemoryCacheProvider,
-                DbProvider,
-                ExternalApiProvider,
-                MultiSourceProvider,
-                ThreeLayerProvider,
-            )
+            from core.data.history_provider.memory_provider import MemoryCacheProvider
+            from core.data.history_provider.db_provider import DbProvider
+            from core.data.history_provider.external_provider import ExternalApiProvider
+            from core.data.history_provider.multi_source import MultiSourceProvider
+            from core.data.history_provider.three_layer import ThreeLayerProvider
             from src.data_provider.bar_repository import SqliteBarRepository
             from src.data_provider.trading_calendar_adapter import XCalTradingCalendar
             from src.storage import DatabaseManager

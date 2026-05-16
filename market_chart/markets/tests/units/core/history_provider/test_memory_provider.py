@@ -16,7 +16,7 @@ class TestMemoryCacheProvider:
     @pytest.fixture
     def provider(self):
         """创建空的 MemoryCacheProvider 实例"""
-        from ..memory_provider import MemoryCacheProvider
+        from core.data.history_provider.memory_provider import MemoryCacheProvider
         return MemoryCacheProvider()
 
     @pytest.fixture

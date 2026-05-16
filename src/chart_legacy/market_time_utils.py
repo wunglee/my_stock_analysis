@@ -51,14 +51,39 @@ class MarketTimeUtils:
 
     @staticmethod
     def determine_trading_phase(market: MarketCode, market_local_time: pd.Timestamp):
-        """简化版：只判断是否在交易时段"""
+        """判断市场交易时段
+
+        逻辑：
+        1. 通过交易日历判断今天是否为交易日（非交易日 → AFTER_CLOSE）
+        2. 交易日才判断具体时段（盘前、盘中、午休、盘后）
+        """
+        from datetime import time as dt_time
         from src.chart_legacy.market_enums import TradingPhase
+
         if market_local_time.tzinfo is None:
             return TradingPhase.AFTER_CLOSE
+
+        # 步骤1：判断是否为交易日
+        market_tz = MarketTimeUtils.get_market_timezone(market)
+        market_date_ts = pd.Timestamp(market_local_time.date()).tz_localize(market_tz)
+
+        try:
+            from src.data_provider.trading_calendar_adapter import XCalTradingCalendar
+            calendar = XCalTradingCalendar(market=market.value.lower())
+            if not calendar.is_trading_day(market_date_ts):
+                return TradingPhase.AFTER_CLOSE
+        except Exception:
+            # 日历异常时 fallback：周末直接判定为非交易
+            weekday = market_local_time.weekday()
+            if weekday >= 5:
+                return TradingPhase.AFTER_CLOSE
+            # 工作日继续走时间判断（可能包含节假日误报，但比静默失败好）
+
+        # 步骤2：判断具体时段
         current_time = market_local_time.time()
+
         # A股交易时间 09:30-11:30, 13:00-15:00
         if market.value == 'CN':
-            from datetime import time as dt_time
             if dt_time(9, 30) <= current_time <= dt_time(11, 30):
                 return TradingPhase.TRADING
             if dt_time(13, 0) <= current_time <= dt_time(15, 0):
@@ -66,12 +91,13 @@ class MarketTimeUtils:
             if dt_time(9, 0) <= current_time < dt_time(9, 30):
                 return TradingPhase.BEFORE_OPEN
             return TradingPhase.AFTER_CLOSE
+
         # 美股 09:30-16:00
         if market.value == 'US':
-            from datetime import time as dt_time
             if dt_time(9, 30) <= current_time <= dt_time(16, 0):
                 return TradingPhase.TRADING
             return TradingPhase.AFTER_CLOSE
+
         return TradingPhase.AFTER_CLOSE
 
     @staticmethod

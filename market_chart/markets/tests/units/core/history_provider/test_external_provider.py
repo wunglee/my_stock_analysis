@@ -8,7 +8,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from ..external_provider import ExternalApiProvider
+from core.data.history_provider.external_provider import ExternalApiProvider
 
 
 class TestExternalApiProvider:

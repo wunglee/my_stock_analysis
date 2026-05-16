@@ -25,7 +25,7 @@ class TestDbProvider:
     @pytest.fixture
     def provider(self, mock_repo):
         """创建 DbProvider 实例，注入 mock repo"""
-        from ..db_provider import DbProvider
+        from core.data.history_provider.db_provider import DbProvider
         return DbProvider(repository=mock_repo)
 
     @pytest.fixture

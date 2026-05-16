@@ -209,7 +209,7 @@ const BacktestPage: React.FC = () => {
   const [technicalCodes, setTechnicalCodes] = useState('');
   const [technicalStartDate, setTechnicalStartDate] = useState(defaultStartDate);
   const [technicalEndDate, setTechnicalEndDate] = useState(defaultEndDate);
-  const [technicalEvalDays] = useState('10');
+  const [technicalEvalDays, setTechnicalEvalDays] = useState('');
   const [klineLoaded, setKlineLoaded] = useState(false);
   const [klineLoadId, setKlineLoadId] = useState(0);
 
