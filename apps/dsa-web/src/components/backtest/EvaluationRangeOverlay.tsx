@@ -168,7 +168,7 @@ export function EvaluationRangeOverlay({
   // 获取 Portal 目标容器（不缓存，因为 mainChart 由 kline_chart.js 动态创建）
   const portalTarget = typeof document !== 'undefined' ? document.getElementById('mainChart') : null;
 
-  if (!portalTarget || !pixelRange || !range) return null;
+  if (!portalTarget || !pixelRange || !range || !activeGroupId) return null;
 
   return createPortal(
     <div

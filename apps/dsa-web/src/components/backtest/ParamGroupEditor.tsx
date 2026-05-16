@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Copy, Trash2, Plus, Eye, EyeOff, AlertCircle, ChevronDown } from 'lucide-react';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import type { StrategyConfig, ParamGroup, StrategyParameter } from '../../types/technicalBacktest';
 
 interface Props {
@@ -96,6 +97,11 @@ export const ParamGroupEditor: React.FC<Props> = ({
     );
   }
 
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const pendingDeleteGroup = pendingDeleteId
+    ? paramGroups.find((g) => g.id === pendingDeleteId)
+    : null;
+
   const invalidIds = useMemo(() => {
     const ids = new Set<string>();
     for (const group of paramGroups) {
@@ -185,7 +191,7 @@ export const ParamGroupEditor: React.FC<Props> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onRemove(group.id);
+                    setPendingDeleteId(group.id);
                   }}
                   className="text-muted-text hover:text-danger transition-colors flex-shrink-0"
                   title="删除"
@@ -246,6 +252,22 @@ export const ParamGroupEditor: React.FC<Props> = ({
           添加参数组
         </button>
       )}
+
+      <ConfirmDialog
+        isOpen={!!pendingDeleteId}
+        title="删除参数组"
+        message={pendingDeleteGroup ? `确定删除参数组 "${pendingDeleteGroup.name}" 吗？此操作不可撤销。` : ''}
+        confirmText="删除"
+        cancelText="取消"
+        isDanger
+        onConfirm={() => {
+          if (pendingDeleteId) {
+            onRemove(pendingDeleteId);
+          }
+          setPendingDeleteId(null);
+        }}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 };

@@ -4,7 +4,6 @@ import { Check, Minus, X } from 'lucide-react';
 import { StockAutocomplete } from '../components/StockAutocomplete';
 import { ParamGroupEditor } from '../components/backtest/ParamGroupEditor';
 import { TemplateManager } from '../components/backtest/TemplateManager';
-import { ParamGroupResultRow } from '../components/backtest/ParamGroupResultRow';
 import { backtestApi } from '../api/backtest';
 import type { ParsedApiError } from '../api/error';
 import { getParsedApiError } from '../api/error';
@@ -209,7 +208,6 @@ const BacktestPage: React.FC = () => {
   const [technicalCodes, setTechnicalCodes] = useState('');
   const [technicalStartDate, setTechnicalStartDate] = useState(defaultStartDate);
   const [technicalEndDate, setTechnicalEndDate] = useState(defaultEndDate);
-  const [technicalEvalDays, setTechnicalEvalDays] = useState('');
   const [klineLoaded, setKlineLoaded] = useState(false);
   const [klineLoadId, setKlineLoadId] = useState(0);
 
@@ -269,7 +267,6 @@ const BacktestPage: React.FC = () => {
     technicalCodes,
     technicalStartDate,
     technicalEndDate,
-    technicalEvalDays,
     klineLoaded,
     klineLoadId,
   });
@@ -332,20 +329,6 @@ const BacktestPage: React.FC = () => {
       setActiveGroupId(firstEnabled.id);
     }
   }, [batchResults, klineLoaded, paramGroups, activeGroupId, setActiveGroupId]);
-
-  // 点击参数面板外部时关闭展开状态并恢复MA线
-  useEffect(() => {
-    if (!isTechnicalMode || !activeGroupId) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const panel = document.getElementById('paramGroupPanel');
-      const target = e.target as Node;
-      if (panel && !panel.contains(target)) {
-        setActiveGroupId(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isTechnicalMode, activeGroupId, setActiveGroupId]);
 
   // 从多代码输入中提取最后一个 token 作为搜索关键词
   // 如果最后一个 token 已经是完整代码（带市场后缀），则不触发搜索
@@ -789,36 +772,6 @@ const BacktestPage: React.FC = () => {
                   />
                 </div>
               )}
-              <section className="min-h-0 flex-1 overflow-y-auto">
-                {!batchResults ? (
-                <EmptyState
-                  title="等待运行"
-                  description="选择策略、配置参数组，点击运行批量回测。"
-                  className="backtest-empty-state border-dashed"
-                  icon={(
-                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  )}
-                />
-              ) : (
-                <div className="animate-fade-in space-y-4">
-                  <div className="backtest-table-toolbar">
-                    <div className="backtest-table-toolbar-meta">
-                      <span className="label-uppercase">批量回测结果对比</span>
-                      <span className="text-xs text-secondary-text">
-                        {selectedStrategy?.name} · {batchResults.length} 组参数 · {batchResults[0]?.stockResult?.code ?? '--'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    {batchResults.filter((r) => r?.group?.id).map((result) => (
-                      <ParamGroupResultRow key={result.group.id} result={result} />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </section>
             </div>
           </>
         ) : (

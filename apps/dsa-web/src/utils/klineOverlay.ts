@@ -416,6 +416,17 @@ function getColor(index: number): string {
   return GROUP_COLORS[index % GROUP_COLORS.length];
 }
 
+/** 计算信号标记在图表上的显示价格，避免与 K 线柱子重叠 */
+function getSignalDisplayPrice(s: SignalMarker, klineData: KlineBar[]): number {
+  const bar = s.index != null && s.index >= 0 && s.index < klineData.length
+    ? klineData[s.index]
+    : klineData.find((k) => k.date === s.date);
+  if (!bar) return s.price;
+  const range = bar.high - bar.low;
+  const offset = Math.max(range * 1.2, bar.close * 0.02);
+  return s.action === 'buy' ? bar.low - offset : bar.high + offset;
+}
+
 export function buildOverlaySeriesForGroup(
   group: ParamGroup,
   strategy: StrategyConfig,
@@ -441,6 +452,7 @@ export function buildOverlaySeriesForGroup(
           xAxisIndex: 0,
           yAxisIndex: 0,
           animation: false,
+          symbol: 'none',
           lineStyle: { color, type: 'solid', width: 1.5 },
         },
         {
@@ -450,16 +462,17 @@ export function buildOverlaySeriesForGroup(
           xAxisIndex: 0,
           yAxisIndex: 0,
           animation: false,
+          symbol: 'none',
           lineStyle: { color, type: 'dashed', width: 1.5 },
         },
         {
           name: `${prefix}_BUY`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'buy').map((s) => ({
-            value: [s.index ?? s.date, s.price],
+            value: [s.index ?? s.date, getSignalDisplayPrice(s, klineData)],
             symbol: 'triangle',
-            symbolSize: 14,
-            itemStyle: { color: '#22c55e' },
+            symbolSize: 18,
+            itemStyle: { color: '#ef4444', borderColor: '#fff', borderWidth: 2, shadowBlur: 4, shadowColor: 'rgba(0,0,0,0.4)' },
           })),
           xAxisIndex: 0,
           yAxisIndex: 0,
@@ -471,11 +484,11 @@ export function buildOverlaySeriesForGroup(
           name: `${prefix}_SELL`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'sell').map((s) => ({
-            value: [s.index ?? s.date, s.price],
+            value: [s.index ?? s.date, getSignalDisplayPrice(s, klineData)],
             symbol: 'triangle',
             symbolRotate: 180,
-            symbolSize: 14,
-            itemStyle: { color: '#ef4444' },
+            symbolSize: 18,
+            itemStyle: { color: '#22c55e', borderColor: '#fff', borderWidth: 2, shadowBlur: 4, shadowColor: 'rgba(0,0,0,0.4)' },
           })),
           xAxisIndex: 0,
           yAxisIndex: 0,
@@ -499,6 +512,7 @@ export function buildOverlaySeriesForGroup(
           xAxisIndex: 0,
           yAxisIndex: 0,
           animation: false,
+          symbol: 'none',
           lineStyle: { color, type: 'solid', width: 1 },
         },
         {
@@ -508,6 +522,7 @@ export function buildOverlaySeriesForGroup(
           xAxisIndex: 0,
           yAxisIndex: 0,
           animation: false,
+          symbol: 'none',
           lineStyle: { color, type: 'dashed', width: 1 },
         },
         {
@@ -517,6 +532,7 @@ export function buildOverlaySeriesForGroup(
           xAxisIndex: 0,
           yAxisIndex: 0,
           animation: false,
+          symbol: 'none',
           lineStyle: { color, type: 'solid', width: 1 },
           areaStyle: { color, opacity: 0.08 },
         },
@@ -524,10 +540,10 @@ export function buildOverlaySeriesForGroup(
           name: `${prefix}_BUY`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'buy').map((s) => ({
-            value: [s.index ?? s.date, s.price],
+            value: [s.index ?? s.date, getSignalDisplayPrice(s, klineData)],
             symbol: 'triangle',
-            symbolSize: 14,
-            itemStyle: { color: '#22c55e' },
+            symbolSize: 18,
+            itemStyle: { color: '#ef4444', borderColor: '#fff', borderWidth: 2, shadowBlur: 4, shadowColor: 'rgba(0,0,0,0.4)' },
           })),
           xAxisIndex: 0,
           yAxisIndex: 0,
@@ -539,11 +555,11 @@ export function buildOverlaySeriesForGroup(
           name: `${prefix}_SELL`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'sell').map((s) => ({
-            value: [s.index ?? s.date, s.price],
+            value: [s.index ?? s.date, getSignalDisplayPrice(s, klineData)],
             symbol: 'triangle',
             symbolRotate: 180,
-            symbolSize: 14,
-            itemStyle: { color: '#ef4444' },
+            symbolSize: 18,
+            itemStyle: { color: '#22c55e', borderColor: '#fff', borderWidth: 2, shadowBlur: 4, shadowColor: 'rgba(0,0,0,0.4)' },
           })),
           xAxisIndex: 0,
           yAxisIndex: 0,
@@ -568,6 +584,7 @@ export function buildOverlaySeriesForGroup(
           xAxisIndex: 1,
           yAxisIndex: 1,
           animation: false,
+          symbol: 'none',
           lineStyle: { color, type: 'solid', width: 1 },
         },
         {
@@ -577,6 +594,7 @@ export function buildOverlaySeriesForGroup(
           xAxisIndex: 1,
           yAxisIndex: 1,
           animation: false,
+          symbol: 'none',
           lineStyle: { color: '#f97316', type: 'solid', width: 1 },
         },
         {
@@ -592,10 +610,10 @@ export function buildOverlaySeriesForGroup(
           name: `${prefix}_BUY`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'buy').map((s) => ({
-            value: [s.index ?? s.date, s.price],
+            value: [s.index ?? s.date, getSignalDisplayPrice(s, klineData)],
             symbol: 'triangle',
-            symbolSize: 14,
-            itemStyle: { color: '#22c55e' },
+            symbolSize: 18,
+            itemStyle: { color: '#ef4444', borderColor: '#fff', borderWidth: 2, shadowBlur: 4, shadowColor: 'rgba(0,0,0,0.4)' },
           })),
           xAxisIndex: 0,
           yAxisIndex: 0,
@@ -607,11 +625,11 @@ export function buildOverlaySeriesForGroup(
           name: `${prefix}_SELL`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'sell').map((s) => ({
-            value: [s.index ?? s.date, s.price],
+            value: [s.index ?? s.date, getSignalDisplayPrice(s, klineData)],
             symbol: 'triangle',
             symbolRotate: 180,
-            symbolSize: 14,
-            itemStyle: { color: '#ef4444' },
+            symbolSize: 18,
+            itemStyle: { color: '#22c55e', borderColor: '#fff', borderWidth: 2, shadowBlur: 4, shadowColor: 'rgba(0,0,0,0.4)' },
           })),
           xAxisIndex: 0,
           yAxisIndex: 0,
@@ -638,6 +656,7 @@ export function buildOverlaySeriesForGroup(
           xAxisIndex: 1,
           yAxisIndex: 1,
           animation: false,
+          symbol: 'none',
           lineStyle: { color, type: 'solid', width: 1.5 },
         },
         {
@@ -647,6 +666,7 @@ export function buildOverlaySeriesForGroup(
           xAxisIndex: 1,
           yAxisIndex: 1,
           animation: false,
+          symbol: 'none',
           lineStyle: { color: '#ef4444', type: 'dashed', width: 0.5, opacity: 0.5 },
         },
         {
@@ -656,16 +676,17 @@ export function buildOverlaySeriesForGroup(
           xAxisIndex: 1,
           yAxisIndex: 1,
           animation: false,
+          symbol: 'none',
           lineStyle: { color: '#22c55e', type: 'dashed', width: 0.5, opacity: 0.5 },
         },
         {
           name: `${prefix}_BUY`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'buy').map((s) => ({
-            value: [s.date, s.price],
+            value: [s.index ?? s.date, getSignalDisplayPrice(s, klineData)],
             symbol: 'triangle',
-            symbolSize: 14,
-            itemStyle: { color: '#22c55e' },
+            symbolSize: 18,
+            itemStyle: { color: '#ef4444', borderColor: '#fff', borderWidth: 2, shadowBlur: 4, shadowColor: 'rgba(0,0,0,0.4)' },
           })),
           xAxisIndex: 0,
           yAxisIndex: 0,
@@ -677,11 +698,11 @@ export function buildOverlaySeriesForGroup(
           name: `${prefix}_SELL`,
           type: 'scatter',
           data: signals.filter((s) => s.action === 'sell').map((s) => ({
-            value: [s.date, s.price],
+            value: [s.index ?? s.date, getSignalDisplayPrice(s, klineData)],
             symbol: 'triangle',
             symbolRotate: 180,
-            symbolSize: 14,
-            itemStyle: { color: '#ef4444' },
+            symbolSize: 18,
+            itemStyle: { color: '#22c55e', borderColor: '#fff', borderWidth: 2, shadowBlur: 4, shadowColor: 'rgba(0,0,0,0.4)' },
           })),
           xAxisIndex: 0,
           yAxisIndex: 0,

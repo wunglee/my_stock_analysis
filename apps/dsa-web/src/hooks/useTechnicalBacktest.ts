@@ -175,7 +175,6 @@ interface UseTechnicalBacktestOptions {
   technicalCodes: string;
   technicalStartDate: string;
   technicalEndDate: string;
-  technicalEvalDays: string;
   klineLoaded?: boolean;
   klineLoadId?: number;
 }
