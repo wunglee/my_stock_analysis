@@ -57,7 +57,7 @@ from .base import BaseFetcher, DataFetchError, RateLimitError, STANDARD_COLUMNS,
 from .realtime_types import (
     UnifiedRealtimeQuote, RealtimeSource,
     get_realtime_circuit_breaker,
-    safe_float, safe_int  # 使用统一的类型转换函数
+    safe_float, safe_int, safe_int_hands_to_shares  # 使用统一的类型转换函数
 )
 
 
@@ -682,7 +682,7 @@ class EfinanceFetcher(BaseFetcher):
                 price=safe_float(row.get(price_col)),
                 change_pct=safe_float(row.get(pct_col)),
                 change_amount=safe_float(row.get(chg_col)),
-                volume=safe_int(row.get(vol_col)),
+                volume=safe_int_hands_to_shares(row.get(vol_col)),
                 amount=safe_float(row.get(amt_col)),
                 turnover_rate=safe_float(row.get(turn_col)),
                 amplitude=safe_float(row.get(amp_col)),
@@ -783,7 +783,7 @@ class EfinanceFetcher(BaseFetcher):
                 price=safe_float(row.get(price_col)),
                 change_pct=safe_float(row.get(pct_col)),
                 change_amount=safe_float(row.get(chg_col)),
-                volume=safe_int(row.get(vol_col)),
+                volume=safe_int_hands_to_shares(row.get(vol_col)),
                 amount=safe_float(row.get(amt_col)),
                 turnover_rate=safe_float(row.get(turn_col)),
                 amplitude=safe_float(row.get(amp_col)),

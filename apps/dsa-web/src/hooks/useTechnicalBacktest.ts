@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { generateUUID } from '../utils/uuid';
 import { backtestApi } from '../api/backtest';
 import { getParsedApiError } from '../api/error';
 import type { ParsedApiError } from '../api/error';
@@ -300,7 +301,7 @@ export function useTechnicalBacktest(
       paramsSourceRef.current = 'user';
       setParamGroups([
         {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           name: '参数组 1',
           enabled: true,
           params: buildDefaultParams(strategy.parameters),
@@ -312,7 +313,7 @@ export function useTechnicalBacktest(
       paramsSourceRef.current = 'user';
       setParamGroups([
         {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           name: '参数组 1',
           enabled: true,
           params: buildDefaultParams(strategy.parameters),
@@ -327,7 +328,7 @@ export function useTechnicalBacktest(
       if (hasMismatch) {
         setParamGroups([
           {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             name: '参数组 1',
             enabled: true,
             params: buildDefaultParams(strategy.parameters),
@@ -414,7 +415,7 @@ export function useTechnicalBacktest(
     setParamGroups((prev) => [
       ...prev,
       {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         name: `参数组 ${nextNum}`,
         enabled: true,
         params: buildDefaultParams(selectedStrategy.parameters),
@@ -433,7 +434,7 @@ export function useTechnicalBacktest(
     setParamGroups((prev) => [
       ...prev,
       {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         name: `${group.name} (副本)`,
         enabled: true,
         params: { ...group.params },

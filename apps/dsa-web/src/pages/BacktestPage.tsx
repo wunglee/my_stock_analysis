@@ -222,14 +222,10 @@ const BacktestPage: React.FC = () => {
     setKlineLoadId((id) => id + 1);
 
     requestAnimationFrame(() => {
-      window.KlineChart?.setCurrent({ id: pureCode }, 'CN', false);
       window.KlineChart?.setRealtimeUpdateEnabled(false);
+      window.KlineChart?.setCurrent({ id: pureCode }, 'CN', false);
     });
   }, []);
-
-  const handleLoadKline = useCallback(() => {
-    doLoadKline(technicalCodes);
-  }, [technicalCodes, doLoadKline]);
 
   // 切换模式时停止K线实时更新并重置加载状态
   const handleModeSwitch = useCallback((technical: boolean) => {
@@ -255,7 +251,6 @@ const BacktestPage: React.FC = () => {
     updateGroupName,
     toggleGroupEnabled,
     setInvalidGroupIds,
-    batchResults,
     isBatchRunning,
     technicalError,
     templates,
@@ -283,6 +278,12 @@ const BacktestPage: React.FC = () => {
     paramGroups,
     strategy: selectedStrategy,
   });
+
+  const handleLoadKline = useCallback(() => {
+    hasAutoSelectedRef.current = false;
+    setActiveGroupId(null);
+    doLoadKline(technicalCodes);
+  }, [technicalCodes, doLoadKline, setActiveGroupId]);
 
   // 策略切换 → K线图技术指标联动
   // 通过 DOM click 触发 kline_chart.js 的指标按钮，不修改 kline_chart.js 本身
@@ -317,10 +318,10 @@ const BacktestPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [selectedStrategyId, klineLoaded]);
 
-  // 回测完成后自动选中第一个启用参数组（仅首次获得结果时）
+  // K线加载后自动选中第一个启用参数组（每次加载新股票时重置）
   const hasAutoSelectedRef = useRef(false);
   useEffect(() => {
-    if (!batchResults?.length || !klineLoaded) return;
+    if (!klineLoaded) return;
     if (hasAutoSelectedRef.current) return;
     if (activeGroupId) return;
     const firstEnabled = paramGroups.find((g) => g.enabled);
@@ -328,7 +329,7 @@ const BacktestPage: React.FC = () => {
       hasAutoSelectedRef.current = true;
       setActiveGroupId(firstEnabled.id);
     }
-  }, [batchResults, klineLoaded, paramGroups, activeGroupId, setActiveGroupId]);
+  }, [klineLoaded, klineLoadId, paramGroups, activeGroupId, setActiveGroupId]);
 
   // 从多代码输入中提取最后一个 token 作为搜索关键词
   // 如果最后一个 token 已经是完整代码（带市场后缀），则不触发搜索

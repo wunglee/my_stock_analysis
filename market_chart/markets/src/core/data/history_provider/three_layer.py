@@ -94,6 +94,13 @@ class ThreeLayerProvider:
     # ------------------------------------------------------------------ #
     # Internal
     # ------------------------------------------------------------------ #
+    @staticmethod
+    def _to_naive(ts: pd.Timestamp) -> pd.Timestamp:
+        """统一将 tz-aware Timestamp 转为 tz-naive，避免 tz-aware vs tz-naive 比较报错。"""
+        if ts.tz is not None:
+            return ts.tz_localize(None)
+        return ts
+
     def _fetch_internal(
         self,
         symbol: str,
@@ -102,6 +109,10 @@ class ThreeLayerProvider:
         period: str,
     ) -> pd.DataFrame | None:
         """内部获取逻辑（不含异常兜底）"""
+        # 统一入口剥离时区，确保向下传递的日期都是 tz-naive
+        start_date = self._to_naive(start_date)
+        end_date = self._to_naive(end_date)
+
         all_data: List[pd.DataFrame] = []
 
         # === 第1层: Memory ===
@@ -249,19 +260,7 @@ class ThreeLayerProvider:
         if not missing_days:
             return []
 
-        # 4. 排除上市前日期
-        earliest = self._memory.get_earliest_date(symbol)
-        if earliest is not None:
-            earliest_norm = _to_naive(earliest)
-            missing_days = [
-                d for d in missing_days
-                if _to_naive(d) >= earliest_norm
-            ]
-
-        if not missing_days:
-            return []
-
-        # 5. 连续缺失日合并为区间
+        # 4. 连续缺失日合并为区间
         ranges = []
         range_start = missing_days[0]
         range_end = missing_days[0]

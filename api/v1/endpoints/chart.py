@@ -110,6 +110,7 @@ def get_chart_data(
     count: int = Query(120, ge=1, le=500, description="数据条数"),
     before: Optional[str] = Query(None, description="获取此日期之前的数据（YYYY-MM-DD，已获取的K线日期，可选）"),
     indicators: str = Query("all", description="指标列表，逗号分隔或 all"),
+    realtime: bool = Query(True, description="是否启用实时K线更新（回测场景可设为 false）"),
 ):
     """
     获取K线图完整数据（K线 + 技术指标 + 事件）
@@ -138,6 +139,7 @@ def get_chart_data(
             before=before_ts,
             indicators=indicators,
             market_local_time=market_local_time,
+            enable_realtime=realtime,
         )
 
         return {

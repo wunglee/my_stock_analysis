@@ -260,7 +260,11 @@ class BaostockFetcher(BaseFetcher):
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
-        
+
+        # Baostock 返回的成交量单位是手（100股/手），统一转为股
+        if 'volume' in df.columns:
+            df['volume'] = df['volume'] * 100
+
         # 添加股票代码列
         df['code'] = stock_code
 

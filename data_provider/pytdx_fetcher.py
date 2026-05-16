@@ -344,7 +344,11 @@ class PytdxFetcher(BaseFetcher):
         }
         
         df = df.rename(columns=column_mapping)
-        
+
+        # Pytdx 返回的 volume 单位是"手"，需要转换为"股"
+        if 'volume' in df.columns:
+            df['volume'] = df['volume'] * 100
+
         # 计算涨跌幅（pytdx 不返回涨跌幅，需要自己计算）
         if 'pct_chg' not in df.columns and 'close' in df.columns:
             df['pct_chg'] = df['close'].pct_change() * 100

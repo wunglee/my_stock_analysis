@@ -86,6 +86,7 @@ class HistoryProviderAdapter:
         end_date: pd.Timestamp,
         market_local_time: pd.Timestamp,
         period: str = "daily",
+        enable_realtime: bool = True,
     ) -> PriceData:
         """获取K线数据（适配 ChartDataAssembler）
 
@@ -118,7 +119,10 @@ class HistoryProviderAdapter:
         price_data = PriceData.from_dataframe(df, symbol)
 
         # 设置 needs_realtime_kline 标记
-        self._set_needs_realtime_kline(price_data, market_local_time)
+        if enable_realtime:
+            self._set_needs_realtime_kline(price_data, market_local_time)
+        else:
+            price_data.needs_realtime_kline = False
 
         return price_data
 

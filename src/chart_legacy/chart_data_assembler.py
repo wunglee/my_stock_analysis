@@ -31,6 +31,7 @@ class ChartDataAssembler:
         before: Optional[pd.Timestamp] = None,
         indicators: Optional[str] = 'all',
         market_local_time: pd.Timestamp = None,
+        enable_realtime: bool = True,
     ) -> Dict[str, Any]:
         """组装完整的图表数据"""
         try:
@@ -49,7 +50,7 @@ class ChartDataAssembler:
             else:
                 warmup_count = 30
             t1 = time.perf_counter()
-            price_data_full = self._fetch_kline_data(symbol, period, count + warmup_count, before, market_local_time)
+            price_data_full = self._fetch_kline_data(symbol, period, count + warmup_count, before, market_local_time, enable_realtime)
             t2 = time.perf_counter()
             logger.info(f"[计时] 步骤1-获取K线: {(t2-t1)*1000:.0f}ms")
 
@@ -139,6 +140,7 @@ class ChartDataAssembler:
         count: int,
         before: Optional[pd.Timestamp],
         market_local_time: pd.Timestamp,
+        enable_realtime: bool = True,
     ) -> PriceData:
         """获取K线数据"""
         if before:
@@ -170,7 +172,7 @@ class ChartDataAssembler:
 
         t_fetch = time.perf_counter()
         price_data = self._data_provider.get_index_prices(
-            symbol, start_date, end_date, market_local_time, period
+            symbol, start_date, end_date, market_local_time, period, enable_realtime
         )
         t_fetch_end = time.perf_counter()
         logger.info(f"[计时] _fetch_kline_data.get_index_prices: {(t_fetch_end-t_fetch)*1000:.0f}ms (start={start_date}, end={end_date})")

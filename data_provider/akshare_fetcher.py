@@ -47,7 +47,7 @@ from .base import BaseFetcher, DataFetchError, RateLimitError, STANDARD_COLUMNS,
 from .realtime_types import (
     UnifiedRealtimeQuote, ChipDistribution, RealtimeSource,
     get_realtime_circuit_breaker, get_chip_circuit_breaker,
-    safe_float, safe_int  # 使用统一的类型转换函数
+    safe_float, safe_int, safe_int_hands_to_shares  # 使用统一的类型转换函数
 )
 from .us_index_mapping import is_us_index_code, is_us_stock_code
 
@@ -908,7 +908,7 @@ class AkshareFetcher(BaseFetcher):
                 price=safe_float(row.get('最新价')),
                 change_pct=safe_float(row.get('涨跌幅')),
                 change_amount=safe_float(row.get('涨跌额')),
-                volume=safe_int(row.get('成交量')),
+                volume=safe_int_hands_to_shares(row.get('成交量')),
                 amount=safe_float(row.get('成交额')),
                 volume_ratio=safe_float(row.get('量比')),
                 turnover_rate=safe_float(row.get('换手率')),
@@ -1312,7 +1312,7 @@ class AkshareFetcher(BaseFetcher):
                 price=safe_float(row.get('最新价')),
                 change_pct=safe_float(row.get('涨跌幅')),
                 change_amount=safe_float(row.get('涨跌额')),
-                volume=safe_int(row.get('成交量')),
+                volume=safe_int_hands_to_shares(row.get('成交量')),
                 amount=safe_float(row.get('成交额')),
                 volume_ratio=safe_float(row.get('量比')),
                 turnover_rate=safe_float(row.get('换手率')),
@@ -1392,7 +1392,7 @@ class AkshareFetcher(BaseFetcher):
                         price=safe_float(row.get('最新价')),
                         change_pct=safe_float(row.get('涨跌幅')),
                         change_amount=safe_float(row.get('涨跌额')),
-                        volume=safe_int(row.get('成交量')),
+                        volume=safe_int_hands_to_shares(row.get('成交量')),
                         amount=safe_float(row.get('成交额')),
                         volume_ratio=safe_float(row.get('量比')),
                         turnover_rate=safe_float(row.get('换手率')),
@@ -1442,7 +1442,7 @@ class AkshareFetcher(BaseFetcher):
                 price=safe_float(row.get('最新价')),
                 change_pct=safe_float(row.get('涨跌幅')),
                 change_amount=safe_float(row.get('涨跌额')),
-                volume=safe_int(row.get('成交量')),
+                volume=safe_int_hands_to_shares(row.get('成交量')),
                 amount=safe_float(row.get('成交额')),
             )
             circuit_breaker.record_success(sina_key)

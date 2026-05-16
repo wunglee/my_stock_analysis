@@ -169,8 +169,16 @@ export function useKlineOverlay(options: UseKlineOverlayOptions): UseKlineOverla
         const onFinished = () => {
           const gid = activeGroupIdRef.current;
           if (!gid) return;
+
           const cached = overlayCache.current.get(gid);
-          if (!cached || cached.seriesDefs.length === 0) return;
+          if (!cached || cached.seriesDefs.length === 0) {
+            // 缓存为空：首次外部拉取时 tryInit 在数据回来前就执行了 syncToChart，
+            // 当时 klineData 为空导致 overlay 没有构建。现在数据已就绪，重新构建。
+            const klineData = getKlineDataFromChart(chart);
+            if (klineData.length === 0) return;
+            syncToChart();
+            return;
+          }
 
           const series = chart.getOption().series as Array<{ name?: string }>;
           const firstDefName = cached.seriesDefs[0].name;

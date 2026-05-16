@@ -75,13 +75,13 @@ def safe_float(val: Any, default: Optional[float] = None) -> Optional[float]:
 def safe_int(val: Any, default: Optional[int] = None) -> Optional[int]:
     """
     安全转换为整数
-    
+
     先转换为 float，再取整，处理 "123.0" 这类情况
-    
+
     Args:
         val: 待转换的值
         default: 转换失败时的默认值
-        
+
     Returns:
         转换后的整数，或默认值
     """
@@ -89,6 +89,12 @@ def safe_int(val: Any, default: Optional[int] = None) -> Optional[int]:
     if f_val is not None:
         return int(f_val)
     return default
+
+
+def safe_int_hands_to_shares(val: Any) -> Optional[int]:
+    """将手数安全转换为股数（1手 = 100股）"""
+    v = safe_int(val, default=None)
+    return v * 100 if v is not None else None
 
 
 class RealtimeSource(Enum):
@@ -125,7 +131,7 @@ class UnifiedRealtimeQuote:
     change_amount: Optional[float] = None   # 涨跌额
     
     # === 量价指标（部分源可能缺失）===
-    volume: Optional[int] = None            # 成交量（手）
+    volume: Optional[int] = None            # 成交量（股）
     amount: Optional[float] = None          # 成交额（元）
     volume_ratio: Optional[float] = None    # 量比
     turnover_rate: Optional[float] = None   # 换手率(%)

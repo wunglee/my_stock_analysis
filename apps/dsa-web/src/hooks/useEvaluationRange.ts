@@ -92,7 +92,7 @@ export function useEvaluationRange(
     let attempts = 0;
     const MAX_ATTEMPTS = 50;
 
-    const tryInit = () => {
+    function tryInit() {
       if (cancelled) return;
       const chart = getChartInstance();
       if (!chart) {
@@ -134,7 +134,7 @@ export function useEvaluationRange(
         startDate: dates[startIndex],
         endDate: dates[endIndex],
       });
-    };
+    }
 
     requestAnimationFrame(tryInit);
 
@@ -226,15 +226,48 @@ export function useEvaluationRange(
   }, []);
 
   // ── 监听 chart 事件，更新 pixelRange ──
+  // 关键：即使 range 为 null 也要注册监听器，因为首次外部拉取时数据是异步的，
+  // tryInit 可能在数据回来前就放弃了。finished/dataZoom 事件触发后，如果 range
+  // 为 null 但 xAxis 已有数据，需要重新初始化。
   useEffect(() => {
-    if (!chartReady || !range) return;
+    if (!chartReady) return;
 
     const chart = getChartInstance();
     if (!chart) return;
 
     const onUpdate = () => {
       // 延迟两帧确保 ECharts 已完成布局（dataZoom 动画期间状态可能不稳定）
-      requestAnimationFrame(() => requestAnimationFrame(updatePixelRange));
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const curRange = rangeRef.current;
+        if (!curRange) {
+          // range 尚未初始化：检查 xAxis 是否已有数据，有则重新初始化
+          const dates = getXAxisDates(chart);
+          if (dates.length === 0) return;
+          const len = dates.length;
+          const option = chart.getOption();
+          const dataZoom = option?.dataZoom?.[0];
+          let startIndex = 0;
+          let endIndex = len - 1;
+          if (dataZoom) {
+            if (typeof dataZoom.startValue === 'number') {
+              startIndex = Math.max(0, Math.min(Math.round(dataZoom.startValue), len - 1));
+            }
+            if (typeof dataZoom.endValue === 'number') {
+              endIndex = Math.max(0, Math.min(Math.round(dataZoom.endValue), len - 1));
+            }
+          }
+          const newRange: EvaluationRange = {
+            startIndex,
+            endIndex,
+            startDate: dates[startIndex],
+            endDate: dates[endIndex],
+          };
+          setRange(newRange);
+          rangeRef.current = newRange;
+          // 继续执行 updatePixelRange 来设置 pixelRange
+        }
+        updatePixelRange();
+      }));
     };
 
     chart.on('finished', onUpdate);
@@ -249,7 +282,7 @@ export function useEvaluationRange(
       chart.off('dataZoom', onUpdate);
       window.removeEventListener('resize', onUpdate);
     };
-  }, [chartReady, range, updatePixelRange]);
+  }, [chartReady, updatePixelRange]);
 
   // ── 拖动逻辑 ──
   const handleMouseDown = useCallback(

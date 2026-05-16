@@ -692,7 +692,7 @@ class TushareFetcher(BaseFetcher):
 
         from .realtime_types import (
             RealtimeSource,
-            safe_float, safe_int
+            safe_float, safe_int, safe_int_hands_to_shares
         )
 
         # 速率限制检查
@@ -715,7 +715,7 @@ class TushareFetcher(BaseFetcher):
                     price=safe_float(row.get('price')),
                     change_pct=safe_float(row.get('pct_chg')),  # Pro 接口通常直接返回涨跌幅
                     change_amount=safe_float(row.get('change')),
-                    volume=safe_int(row.get('vol')),
+                    volume=safe_int_hands_to_shares(row.get('vol')),
                     amount=safe_float(row.get('amount')),
                     high=safe_float(row.get('high')),
                     low=safe_float(row.get('low')),
@@ -762,7 +762,7 @@ class TushareFetcher(BaseFetcher):
                 price=price,
                 change_pct=round(change_pct, 2),
                 change_amount=round(change_amount, 2),
-                volume=safe_int(row['volume']) // 100,  # 转换为手
+                volume=safe_int(row['volume']),
                 amount=safe_float(row['amount']),
                 high=safe_float(row['high']),
                 low=safe_float(row['low']),

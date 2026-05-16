@@ -45,6 +45,7 @@ class MemoryCacheProvider:
 
         period 参数仅用于接口统一，内部永远返回日线。
         ThreeLayerProvider 在需要周/月线时自己对日线做聚合。
+        调用方（ThreeLayerProvider）保证传入的 start_date/end_date 为 tz-naive。
 
         Returns:
             DataFrame 或 None（无数据时）
@@ -53,7 +54,7 @@ class MemoryCacheProvider:
         if df is None or df.empty:
             return None
 
-        # 按日期范围过滤
+        # 按日期范围过滤（调用方已统一为 tz-naive）
         mask = (df["trade_date"] >= start_date) & (df["trade_date"] <= end_date)
         result = df.loc[mask].copy()
 

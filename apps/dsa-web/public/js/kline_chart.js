@@ -104,30 +104,32 @@
         const period = State.ui.period
         const mockPhase = State.runtime.mockTradingPhase
 
+        const realtimeParam = State.runtime.realtimeEnabled ? '' : '&realtime=false'
+
         if (State.runtime.useMockMode) {
             return {
                 pollInterval: 3000,
                 buildUrl() {
-                    return `/api/v1/chart/data/mock?symbol=${encodeURIComponent(symbol?.id || '')}&period=${period}&count=120&indicators=all&trading_phase=${mockPhase}`
+                    return `/api/v1/chart/data/mock?symbol=${encodeURIComponent(symbol?.id || '')}&period=${period}&count=120&indicators=all&trading_phase=${mockPhase}${realtimeParam}`
                 },
                 buildRealtimeUrl() {
                     return `/api/v1/data/kline/realtime/mock?symbol=${encodeURIComponent(symbol?.id)}&trading_phase=${mockPhase}`
                 },
                 buildHistoryUrl(beforeDate) {
-                    return `/api/v1/chart/data/mock?symbol=${encodeURIComponent(symbol?.id)}&period=${period}&count=60&before=${beforeDate}&indicators=all&trading_phase=${mockPhase}`
+                    return `/api/v1/chart/data/mock?symbol=${encodeURIComponent(symbol?.id)}&period=${period}&count=60&before=${beforeDate}&indicators=all&trading_phase=${mockPhase}${realtimeParam}`
                 }
             }
         }
         return {
             pollInterval: 3000,
             buildUrl() {
-                return `/api/v1/chart/data?symbol=${encodeURIComponent(symbol?.id || '')}&period=${period}&count=120&indicators=all`
+                return `/api/v1/chart/data?symbol=${encodeURIComponent(symbol?.id || '')}&period=${period}&count=120&indicators=all${realtimeParam}`
             },
             buildRealtimeUrl() {
                 return `/api/v1/data/kline/realtime?symbol=${encodeURIComponent(symbol?.id)}&period=${period}`
             },
             buildHistoryUrl(beforeDate) {
-                return `/api/v1/chart/data?symbol=${encodeURIComponent(symbol?.id)}&period=${period}&count=60&before=${beforeDate}&indicators=all`
+                return `/api/v1/chart/data?symbol=${encodeURIComponent(symbol?.id)}&period=${period}&count=60&before=${beforeDate}&indicators=all${realtimeParam}`
             }
         }
     }
